@@ -1418,8 +1418,10 @@ dependencies = [
 name = "rustjourneyplanner"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "leptos",
  "reqwest",
+ "serde_json",
 ]
 
 [[package]]

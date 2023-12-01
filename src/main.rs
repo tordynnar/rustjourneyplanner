@@ -1,9 +1,6 @@
+use std::result::Result::{Ok, Err};
+use anyhow::{anyhow, Result};
 use leptos::*;
-use reqwest::*;
-
-fn main() {
-    leptos::mount_to_body(App);
-}
 
 #[derive(Debug, Clone)]
 struct DatabaseEntry {
@@ -12,15 +9,20 @@ struct DatabaseEntry {
 }
 
 async fn get_data() -> Result<String> {
-    let baseurl = web_sys::window().unwrap().origin();
-    let result = reqwest::get(format!("{baseurl}/js/combine.js")).await?.text().await;
-    result
+    let baseurl = web_sys::window().ok_or(anyhow!("Cannot get base URL"))?.origin();
+    let result = reqwest::get(format!("{baseurl}/js/combine.js")).await?.bytes().await?;
+    let json : serde_json::Value = serde_json::from_slice(&result[14..])?;
+    //logging::log!("{:?}", v);
+    let w = json["systems"]["30000001"]["name"].as_str().ok_or(anyhow!("Not a string"))?;
+    Ok(w.to_owned())
 }
 
+fn main() {
+    mount_to_body(App);
+}
 
 #[component]
 pub fn App() -> impl IntoView {
-    // start with a set of three rows
     let (data, set_data) = create_signal(vec![
         DatabaseEntry {
             key: "faaoo".to_string(),
@@ -45,15 +47,12 @@ pub fn App() -> impl IntoView {
     });
 
     view! {
-        // when we click, update each row,
-        // doubling its value
         <button on:click=move |_| {
             set_data.update(|data| {
                 for row in data {
                     row.value *= 2;
                 }
             });
-            // log the new value of the signal
             logging::log!("{:?}", data.get());
         }>
             "Update Values"
@@ -62,7 +61,6 @@ pub fn App() -> impl IntoView {
             None => view! { <p>"Loading..."</p> }.into_view(),
             Some(data) => view! { <p inner_html=data></p> }.into_view()
         }}
-        // iterate over the rows and display each value
         <For
             each=data
             key=|state| (state.key.clone(), state.value)
@@ -72,6 +70,11 @@ pub fn App() -> impl IntoView {
         </For>
     }
 }
+
+
+
+
+
 
 /*
 #[component]
