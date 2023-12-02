@@ -24,6 +24,7 @@ async fn get_static_data() -> Result<(Vec::<System>, Vec::<Gate>), String> {
 
     let result = reqwest::get(format!("{baseurl}/js/combine.js")).await
         .map_err(|_| format!("Failed to get combine.js"))?
+        .error_for_status().map_err(|_| format!("Failed to get combine.js due to HTTP error"))?
         .bytes().await
         .map_err(|_| format!("Failed to get bytes from combine.js"))?;
 
