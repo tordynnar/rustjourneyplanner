@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use leptos::*;
 
 #[allow(dead_code)]
@@ -23,8 +24,8 @@ async fn get_static_data() -> Result<(Vec::<System>, Vec::<Gate>), String> {
     let baseurl = web_sys::window().ok_or_else(|| format!("Cannot get base URL"))?.origin();
 
     let result = reqwest::get(format!("{baseurl}/js/combine.js")).await
-        .map_err(|_| format!("Failed to get combine.js"))?
-        .error_for_status().map_err(|_| format!("Failed to get combine.js due to HTTP error"))?
+        .map_err(|_| format!("Failed to send request for combine.js"))?
+        .error_for_status().map_err(|_| format!("Bad status code getting combine.js"))?
         .bytes().await
         .map_err(|_| format!("Failed to get bytes from combine.js"))?;
 
@@ -65,6 +66,22 @@ async fn get_static_data() -> Result<(Vec::<System>, Vec::<Gate>), String> {
     Ok((systems, gates))
 }
 
+async fn get_tripwire_data() -> Result<String, String> {
+    let baseurl = web_sys::window().ok_or_else(|| format!("Cannot get base URL"))?.origin();
+
+    let client = reqwest::Client::new();
+    let result = client.post(format!("{baseurl}/refresh.php"))
+        .form(&HashMap::from([
+            ("mode", "init"),
+            ("systemID", "30000142"),
+            ("systemName", "Jita")
+        ]))
+        .send().await.map_err(|_| format!("Failed to POST refresh.php"))?
+        .text().await.map_err(|_| format!("Failed to get text for refresh.php"))?;
+
+    Ok(result)
+}
+
 fn main() {
     mount_to_body(App);
 }
@@ -75,7 +92,17 @@ pub fn App() -> impl IntoView {
         get_static_data().await
     });
 
+    let tripwire_data = create_local_resource(|| (), |_| async move {
+        get_tripwire_data().await
+    });
+
     view! {
+        {move || match tripwire_data.get() {
+            None => view! { <p>"Loading..."</p> }.into_view(),
+            Some(Err(err)) => view! { <p>"Error: "{ err }</p> }.into_view(),
+            Some(Ok(data)) => view! { <p>{data}</p> }.into_view()
+        }}
+        <hr/>
         {move || match static_data.get() {
             None => view! { <p>"Loading..."</p> }.into_view(),
             Some(Err(err)) => view! { <p>"Error: "{ err }</p> }.into_view(),
