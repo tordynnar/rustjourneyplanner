@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::convert::From;
+use chrono::NaiveDateTime;
 use leptos::*;
 
 #[allow(dead_code)]
@@ -161,18 +162,16 @@ async fn get_tripwire_data() -> Result<String, String> {
 
         let wormhole_type = wormhole["type"].as_str().map_or(None, |v| match v { "????" => None, "" => None, _ => Some(v) });
 
+        let lifetime_str = json["signatures"][initial_id]["lifeTime"].as_str().ok_or_else(|| format!("lifeTime missing from wormhole {}", wormhole_id))?;
+        let lifetime = NaiveDateTime::parse_from_str(lifetime_str, "%Y-%m-%d %H:%M:%S").map_err(|_| format!("lifeTime wrong datetime format for wormhole {}", wormhole_id))?;
+
         // Probably created by a deathclone
         if initial_signature_id == None && secondary_signature_id == None { continue }
 
         // Don't want gates, already have then in the static data
         if wormhole_type == Some("GATE") || initial_signature_id == Some("GAT".to_owned()) || secondary_signature_id == Some("GAT".to_owned()) { continue }
 
-        /*{"bookmark": Null, "createdByID": String("2114840060"), "createdByName": String("Star Marshal Maximus"), "id": String("546912"), 
-        "lifeLeft": String("2023-12-05 23:46:25"), "lifeLength": String("259200"), "lifeTime": String("2023-12-02 23:46:25"), "maskID": String("1.0"),
-        "modifiedByID": String("2114840060"), "modifiedByName": String("Star Marshal Maximus"), "modifiedTime": String("2023-12-02 23:46:25"),
-        "name": Null, "signatureID": Null, "systemID": String("30001399"), "type": String("wormhole")}  */
-
-        logging::log!("{:?} {:?} {:?} {:?} {:?}", initial_system_id, secondary_system_id, initial_signature_id, secondary_signature_id, wormhole_type);
+        logging::log!("{:?} {:?} {:?} {:?} {:?} {:?}", initial_system_id, secondary_system_id, initial_signature_id, secondary_signature_id, wormhole_type, lifetime);
     }
 
     Ok(format!("{:?}", json["signatures"]))

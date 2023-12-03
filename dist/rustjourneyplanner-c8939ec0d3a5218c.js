@@ -578,11 +578,11 @@ function __wbg_get_imports() {
         getInt32Memory0()[arg0 / 4 + 0] = ptr1;
     };
     imports.wbg.__wbindgen_closure_wrapper99 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 61, __wbg_adapter_24);
+        const ret = makeMutClosure(arg0, arg1, 83, __wbg_adapter_24);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper1635 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 61, __wbg_adapter_27);
+    imports.wbg.__wbindgen_closure_wrapper1705 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 83, __wbg_adapter_27);
         return addHeapObject(ret);
     };
 
@@ -623,7 +623,7 @@ async function __wbg_init(input) {
     if (wasm !== undefined) return wasm;
 
     if (typeof input === 'undefined') {
-        input = new URL('rustjourneyplanner-760ae8e0bb386bb_bg.wasm', import.meta.url);
+        input = new URL('rustjourneyplanner-c8939ec0d3a5218c_bg.wasm', import.meta.url);
     }
     const imports = __wbg_get_imports();
 
