@@ -250,7 +250,7 @@ async fn get_tripwire_data() -> Result<Vec::<TripwireWormhole>, String> {
     Ok(data)
 }
 
-fn get_graph_data(static_data : StaticData, tripwire_data : Vec::<TripwireWormhole>) -> Result<String,String> {
+fn get_graph_data(static_data : StaticData, tripwire_data : Vec::<TripwireWormhole>) -> Result<Graph::<System, Option<Wormhole>>,String> {
     let mut graph = Graph::<System, Option<Wormhole>>::new();
     let mut node_index = HashMap::<u32, NodeIndex>::new();
 
@@ -300,7 +300,7 @@ fn get_graph_data(static_data : StaticData, tripwire_data : Vec::<TripwireWormho
         );
     }
 
-    Ok(format!("{:?}", graph))
+    Ok(graph)
 }
 
 fn main() {
@@ -317,7 +317,7 @@ pub fn App() -> impl IntoView {
         get_tripwire_data().await
     });
 
-    let graph_data = create_memo(move |_| {
+    let graph_data = Signal::derive(move ||  {
         get_graph_data(
             static_data.get().map_or_else(|| Err(format!("Static data loading...")), |v| v)?,
             tripwire_data.get().map_or_else(|| Err(format!("Tripwire data loading...")), |v| v)?
@@ -326,7 +326,7 @@ pub fn App() -> impl IntoView {
 
     view! {
         {move || match graph_data.get() {
-            Err(e) => view! { <p>"Error: "{ format!("{:?}", e) }</p> }.into_view(),
+            Err(e) => view! { <p>{ format!("{:?}", e) }</p> }.into_view(),
             Ok(v) => view! { <p>{ format!("{:?}", v) }</p> }.into_view(),
         }}
         {move || match tripwire_data.get() {
