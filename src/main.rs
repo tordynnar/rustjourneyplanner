@@ -2,7 +2,9 @@ use std::collections::HashMap;
 use std::convert::From;
 use chrono::{NaiveDateTime, Utc, Duration};
 use petgraph::graph::{Graph, NodeIndex};
+use leptonic::prelude::*;
 use leptos::*;
+use web_sys;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -12,6 +14,14 @@ struct System {
     security: f32,
     class: Option<u16>
 }
+
+impl PartialEq for System {
+    fn eq(&self, other: &System) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for System {}
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -303,10 +313,6 @@ fn get_graph_data(static_data : StaticData, tripwire_data : Vec::<TripwireWormho
     Ok(graph)
 }
 
-fn main() {
-    mount_to_body(App);
-}
-
 #[component]
 pub fn App() -> impl IntoView {
     let static_data = create_local_resource(|| (), |_| async move {
@@ -324,27 +330,55 @@ pub fn App() -> impl IntoView {
         )
     });
 
+    let systems_data = Signal::derive(move ||  {
+        match static_data.get() {
+            Some(Ok(v)) => v.systems.iter().map(|v| v.clone()).collect(),
+            None | Some(Err(_)) => Vec::<System>::new()
+        }
+    });
+
+    let (selected_opt, set_selected_opt) = create_signal(Option::<System>::None);
+
     view! {
-        {move || match graph_data.get() {
-            Err(e) => view! { <p>{ format!("{:?}", e) }</p> }.into_view(),
-            Ok(v) => view! { <p>{ format!("{:?}", v) }</p> }.into_view(),
-        }}
-        {move || match tripwire_data.get() {
-            None => view! { <p>"Loading..."</p> }.into_view(),
-            Some(Err(err)) => view! { <p>"Error: "{ err }</p> }.into_view(),
-            Some(Ok(data)) => view! { <p>{ format!("{:?}", data) }</p> }.into_view()
-        }}
-        <hr/>
-        {move || match static_data.get() {
-            None => view! { <p>"Loading..."</p> }.into_view(),
-            Some(Err(err)) => view! { <p>"Error: "{ err }</p> }.into_view(),
-            Some(Ok(data)) => view! {
-                <ul>
-                    {data.systems.into_iter()
-                        .map(|system| view! { <li>{system.name}</li>})
-                        .collect_view()}
-                </ul>
-            }.into_view()
-        }}
+        <Root default_theme=LeptonicTheme::default()>
+            <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark/>
+            
+            <OptionalSelect
+                options=systems_data
+                search_text_provider=move |o| format!("{o:?}")
+                render_option=move |o| format!("{o:?}")
+                selected=move || selected_opt.get()
+                set_selected=move |v| set_selected_opt.set(v)
+                allow_deselect=true
+            />
+
+            {move || match graph_data.get() {
+                Err(e) => view! { <p>{ format!("{:?}", e) }</p> }.into_view(),
+                Ok(v) => view! { <p>{ format!("{:?}", v) }</p> }.into_view(),
+            }}
+            {move || match tripwire_data.get() {
+                None => view! { <p>"Loading..."</p> }.into_view(),
+                Some(Err(err)) => view! { <p>"Error: "{ err }</p> }.into_view(),
+                Some(Ok(data)) => view! { <p>{ format!("{:?}", data) }</p> }.into_view()
+            }}
+            <hr/>
+            {move || match static_data.get() {
+                None => view! { <p>"Loading..."</p> }.into_view(),
+                Some(Err(err)) => view! { <p>"Error: "{ err }</p> }.into_view(),
+                Some(Ok(data)) => view! {
+                    <ul>
+                        {data.systems.into_iter()
+                            .map(|system| view! { <li>{system.name}</li>})
+                            .collect_view()}
+                    </ul>
+                }.into_view()
+            }}
+        </Root>
     }
+}
+
+fn main() {
+    mount_to_body(|| {
+        view! { <App/>}
+    });
 }
