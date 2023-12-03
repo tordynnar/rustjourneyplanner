@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::convert::From;
-use chrono::NaiveDateTime;
+use chrono::{NaiveDateTime, Utc, Duration};
 use leptos::*;
 
 #[allow(dead_code)]
@@ -43,6 +43,21 @@ enum SystemOrClass {
     Class13,
     Trig,
     Unknown
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+enum WormholeLife {
+    Stable,
+    EOL
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+enum WormholeMass {
+    Stable,
+    Destab,
+    VOC
 }
 
 impl From<Option<u32>> for SystemOrClass {
@@ -150,10 +165,7 @@ async fn get_tripwire_data() -> Result<String, String> {
         let initial_id = wormhole["initialID"].as_str().ok_or_else(|| format!("initialID missing from wormhole {}", wormhole_id))?;
         let secondary_id = wormhole["secondaryID"].as_str().ok_or_else(|| format!("secondaryID missing from wormhole {}", wormhole_id))?;
 
-        let initial_system_id = match json["signatures"][initial_id]["systemID"].as_str().and_then(|v| v.parse::<u32>().ok()) {
-            Some(v) => v,
-            None => continue
-        };
+        let initial_system_id = json["signatures"][initial_id]["systemID"].as_str().and_then(|v| v.parse::<u32>().ok());
 
         let secondary_system_id = SystemOrClass::from(json["signatures"][secondary_id]["systemID"].as_str().and_then(|v| v.parse::<u32>().ok()));
 
@@ -164,6 +176,31 @@ async fn get_tripwire_data() -> Result<String, String> {
 
         let lifetime_str = json["signatures"][initial_id]["lifeTime"].as_str().ok_or_else(|| format!("lifeTime missing from wormhole {}", wormhole_id))?;
         let lifetime = NaiveDateTime::parse_from_str(lifetime_str, "%Y-%m-%d %H:%M:%S").map_err(|_| format!("lifeTime wrong datetime format for wormhole {}", wormhole_id))?;
+        let age = Utc::now().naive_utc() - lifetime;
+
+        let life = match wormhole["life"].as_str() {
+            Some("stable") => {
+                if age < Duration::hours(20) {
+                    Ok(WormholeLife::Stable)
+                } else {
+                    Ok(WormholeLife::EOL)
+                }
+            },
+            Some("critical") => Ok(WormholeLife::EOL),
+            Some(_) => Err(format!("life is not stable or critical for wormhole {}", wormhole_id)),
+            None => Err(format!("life missing from wormhole {}", wormhole_id))
+        }?;
+
+        let mass = match wormhole["mass"].as_str() {
+            Some("stable") => Ok(WormholeMass::Stable),
+            Some("destab") => Ok(WormholeMass::Destab),
+            Some("critical") => Ok(WormholeMass::VOC),
+            Some(_) => Err(format!("mass is not stable, destab or critical for wormhole {}", wormhole_id)),
+            None => Err(format!("mass is missing from wormhole {}", wormhole_id))
+        }?;
+
+        // Wormholes older than 24 hours probably don't exist any more
+        if age > Duration::hours(24) { continue }
 
         // Probably created by a deathclone
         if initial_signature_id == None && secondary_signature_id == None { continue }
@@ -171,7 +208,7 @@ async fn get_tripwire_data() -> Result<String, String> {
         // Don't want gates, already have then in the static data
         if wormhole_type == Some("GATE") || initial_signature_id == Some("GAT".to_owned()) || secondary_signature_id == Some("GAT".to_owned()) { continue }
 
-        logging::log!("{:?} {:?} {:?} {:?} {:?} {:?}", initial_system_id, secondary_system_id, initial_signature_id, secondary_signature_id, wormhole_type, lifetime);
+        logging::log!("{:?} {:?} {:?} {:?} {:?} {:?} {:?}", initial_system_id, secondary_system_id, initial_signature_id, secondary_signature_id, wormhole_type, life, mass);
     }
 
     Ok(format!("{:?}", json["signatures"]))
