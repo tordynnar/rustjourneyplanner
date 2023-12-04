@@ -1756,9 +1756,12 @@ dependencies = [
  "leptos",
  "leptos-tiptap-build",
  "leptos-use 0.8.2",
+ "leptos_icons",
  "petgraph",
  "reqwest",
  "serde_json",
+ "tracing",
+ "uuid",
  "web-sys",
 ]
 
@@ -2325,9 +2328,9 @@ checksum = "5190c9442dcdaf0ddd50f37420417d219ae5261bbf5db120d0f9bab996c9cba1"
 
 [[package]]
 name = "uuid"
-version = "1.5.0"
+version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88ad59a7560b41a70d191093a945f0b87bc1deeda46fb237479708a1d6b6cdfc"
+checksum = "5e395fcf16a7a3d8127ec99782007af141946b4795001f876d54fb0d55978560"
 dependencies = [
  "atomic",
  "getrandom",
