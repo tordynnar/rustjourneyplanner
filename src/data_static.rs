@@ -74,7 +74,7 @@ pub async fn get_static_data() -> Result<StaticData, String> {
 
         let class = value["class"]
             .as_str().map(|v| v.parse::<u16>())
-            .map_or(Ok(None), |r| r.map(Some))  // https://doc.rust-lang.org/rust-by-example/error/multiple_error_types/option_result.html
+            .map_or(Ok(None), |r| r.map(Some))
             .map_err(|_| format!("System {} class is not an integer", id))?;
 
         // Remove weird extra systems
