@@ -83,30 +83,6 @@ pub fn App() -> impl IntoView {
                 selected=move || all_selected.get()
                 set_selected=move |v| set_all_selected.set(v)
             />
-
-            /*
-            {move || match graph_data.get() {
-                Err(e) => view! { <p>{ format!("{:?}", e) }</p> }.into_view(),
-                Ok(v) => view! { <p>{ format!("{:?}", v) }</p> }.into_view(),
-            }}
-            {move || match tripwire_data.get() {
-                None => view! { <p>"Loading..."</p> }.into_view(),
-                Some(Err(err)) => view! { <p>"Error: "{ err }</p> }.into_view(),
-                Some(Ok(data)) => view! { <p>{ format!("{:?}", data) }</p> }.into_view()
-            }}
-            <hr/>
-            {move || match static_data.get() {
-                None => view! { <p>"Loading..."</p> }.into_view(),
-                Some(Err(err)) => view! { <p>"Error: "{ err }</p> }.into_view(),
-                Some(Ok(data)) => view! {
-                    <ul>
-                        {data.systems.into_iter()
-                            .map(|system| view! { <li>{system.name}</li>})
-                            .collect_view()}
-                    </ul>
-                }.into_view()
-            }}
-            */
         </Root>
     }
 }

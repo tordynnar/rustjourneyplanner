@@ -1,3 +1,6 @@
 /target/
-/generated/
+/generated/**
+!/generated/.gitkeep
+/dist
+/Cargo.lock
 .DS_Store
