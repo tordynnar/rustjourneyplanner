@@ -19,7 +19,7 @@ pub fn App() -> impl IntoView {
         get_tripwire_data().await
     });
 
-    let graph_data = Signal::derive(move ||  {
+    let _graph_data = Signal::derive(move ||  {
         get_graph_data(
             static_data.get().map_or_else(|| Err(format!("Static data loading...")), |v| v)?,
             tripwire_data.get().map_or_else(|| Err(format!("Tripwire data loading...")), |v| v)?
@@ -37,9 +37,9 @@ pub fn App() -> impl IntoView {
         }
     });
 
-    let (selected_opt, set_selected_opt) = create_signal(Option::<System>::None);
-
-    let (all_selected, set_all_selected) = create_signal(Vec::<System>::new());
+    let (from_system, set_from_system) = create_signal(Option::<System>::None);
+    let (to_system, set_to_system) = create_signal(Option::<System>::None);
+    let (avoid_systems, set_avoid_systems) = create_signal(Vec::<System>::new());
 
     view! {
         <Root default_theme=LeptonicTheme::default()>
@@ -60,8 +60,28 @@ pub fn App() -> impl IntoView {
                         .collect::<Vec<_>>()
                 }
                 render_option=move |o : System| format!("{}", o.name)
-                selected=move || selected_opt.get()
-                set_selected=move |v| set_selected_opt.set(v)
+                selected=move || from_system.get()
+                set_selected=move |v| set_from_system.set(v)
+                allow_deselect=false
+            />
+
+            <OptionalSelect
+                options=systems_data
+                search_text_provider=move |o : System| o.name
+                search_filter_provider=move |(s, o) : (String, Vec<System>)| {
+                    let lowercased_search = s.to_lowercase();
+                    o.into_iter()
+                        .filter(|it| {
+                            it.name
+                                .to_lowercase()
+                                .starts_with(lowercased_search.as_str())
+                        })
+                        .take(20)
+                        .collect::<Vec<_>>()
+                }
+                render_option=move |o : System| format!("{}", o.name)
+                selected=move || to_system.get()
+                set_selected=move |v| set_to_system.set(v)
                 allow_deselect=false
             />
 
@@ -80,8 +100,8 @@ pub fn App() -> impl IntoView {
                         .collect::<Vec<_>>()
                 }
                 render_option=move |o : System| format!("{}", o.name)
-                selected=move || all_selected.get()
-                set_selected=move |v| set_all_selected.set(v)
+                selected=move || avoid_systems.get()
+                set_selected=move |v| set_avoid_systems.set(v)
             />
         </Root>
     }
