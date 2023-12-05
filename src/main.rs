@@ -1,15 +1,11 @@
 use std::collections::HashMap;
 use std::convert::From;
+use std::cmp::Ordering;
 use chrono::{NaiveDateTime, Utc, Duration};
 use petgraph::graph::{Graph, NodeIndex};
 use leptonic::prelude::*;
 use leptos::*;
 use web_sys;
-
-mod customselect;
-
-use crate::customselect::CustomOptionalSelect;
-
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -27,6 +23,18 @@ impl PartialEq for System {
 }
 
 impl Eq for System {}
+
+impl PartialOrd for System {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.name.partial_cmp(&other.name)
+    }
+}
+
+impl Ord for System {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.name.cmp(&other.name)
+    }
+}
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -350,19 +358,22 @@ pub fn App() -> impl IntoView {
 
     let (selected_opt, set_selected_opt) = create_signal(Option::<System>::None);
 
+    let (all_selected, set_all_selected) = create_signal(Vec::<System>::new());
+
     view! {
         <Root default_theme=LeptonicTheme::default()>
             <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark/>
             
-            <CustomOptionalSelect
+            <OptionalSelect
                 options=systems_data
-                filter_provider=move |(s, o) : (String, Vec<System>)| {
+                search_text_provider=move |o : System| o.name
+                search_filter_provider=move |(s, o) : (String, Vec<System>)| {
                     let lowercased_search = s.to_lowercase();
                     o.into_iter()
                         .filter(|it| {
                             it.name
                                 .to_lowercase()
-                                .starts_with(lowercased_search.as_str())   // originally contains
+                                .starts_with(lowercased_search.as_str())
                         })
                         .take(20)
                         .collect::<Vec<_>>()
@@ -372,6 +383,26 @@ pub fn App() -> impl IntoView {
                 set_selected=move |v| set_selected_opt.set(v)
                 allow_deselect=false
             />
+
+            <Multiselect
+                options=systems_data
+                search_text_provider=move |o : System| o.name
+                search_filter_provider=move |(s, o) : (String, Vec<System>)| {
+                    let lowercased_search = s.to_lowercase();
+                    o.into_iter()
+                        .filter(|it| {
+                            it.name
+                                .to_lowercase()
+                                .starts_with(lowercased_search.as_str())
+                        })
+                        .take(20)
+                        .collect::<Vec<_>>()
+                }
+                render_option=move |o : System| format!("{}", o.name)
+                selected=move || all_selected.get()
+                set_selected=move |v| set_all_selected.set(v)
+            />
+
             /*
             {move || match graph_data.get() {
                 Err(e) => view! { <p>{ format!("{:?}", e) }</p> }.into_view(),
