@@ -1,5 +1,13 @@
 use leptonic::prelude::*;
 use leptos::*;
+use petgraph::algo;
+
+/*
+use petgraph::visit::EdgeFiltered;
+use petgraph::visit::NodeFiltered;
+use petgraph::graph::EdgeReference;
+use petgraph::graph::NodeFilteredEdges;
+*/
 
 mod data_dynamic;
 mod data_static;
@@ -8,6 +16,7 @@ mod data_graph;
 use data_dynamic::*;
 use data_static::*;
 use data_graph::*;
+use petgraph::visit::IntoNodeReferences;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -19,7 +28,7 @@ pub fn App() -> impl IntoView {
         get_tripwire_data().await
     });
 
-    let _graph_data = Signal::derive(move ||  {
+    let graph_data = Signal::derive(move ||  {
         get_graph_data(
             static_data.get().map_or_else(|| Err(format!("Static data loading...")), |v| v)?,
             tripwire_data.get().map_or_else(|| Err(format!("Tripwire data loading...")), |v| v)?
@@ -40,6 +49,40 @@ pub fn App() -> impl IntoView {
     let (from_system, set_from_system) = create_signal(Option::<System>::None);
     let (to_system, set_to_system) = create_signal(Option::<System>::None);
     let (avoid_systems, set_avoid_systems) = create_signal(Vec::<System>::new());
+
+    let route_data = Signal::derive(move || -> Result<String,String> {
+        let graph = graph_data.get()?;
+        let from_system_value = from_system.get().ok_or_else(|| format!("From system not selected"))?;
+        let to_system_value = to_system.get().ok_or_else(|| format!("To system not selected"))?;
+
+        let filtered_graph = graph.filter_map(|_, system| {
+            Some(system.clone())
+        }, |_, wormhole| {
+            Some(wormhole.clone())
+        });
+
+        let (from_system_node, _) = filtered_graph.node_references().find(|(_, system)| {
+            system.id == from_system_value.id
+        }).ok_or_else(|| format!("From system not in graph"))?;
+
+        let (to_system_node, _) = filtered_graph.node_references().find(|(_, system)| {
+            system.id == to_system_value.id
+        }).ok_or_else(|| format!("To system not in graph"))?;
+
+        let (_, path) = algo::astar(
+            &filtered_graph,
+            from_system_node,
+            |n| n == to_system_node,
+            |_| 1,
+            |_| 0,
+        ).ok_or_else(|| format!("No path between systems"))?;
+
+        let path_systems = path.into_iter().map(|v| {
+            filtered_graph[v].clone()
+        }).collect::<Vec<_>>();
+
+        Ok(format!("{:?}", path_systems))
+    });
 
     view! {
         <Root default_theme=LeptonicTheme::default()>
@@ -103,6 +146,11 @@ pub fn App() -> impl IntoView {
                 selected=move || avoid_systems.get()
                 set_selected=move |v| set_avoid_systems.set(v)
             />
+
+            {move || match route_data.get() {
+                Ok(v) => view! { <p>{ v }</p> }.into_view(),
+                Err(err) => view! { <p>{ err }</p> }.into_view(),
+            }}
         </Root>
     }
 }
