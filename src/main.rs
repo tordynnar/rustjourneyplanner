@@ -1,13 +1,7 @@
 use leptonic::prelude::*;
 use leptos::*;
 use petgraph::algo;
-
-/*
-use petgraph::visit::EdgeFiltered;
-use petgraph::visit::NodeFiltered;
-use petgraph::graph::EdgeReference;
-use petgraph::graph::NodeFilteredEdges;
-*/
+use petgraph::visit::IntoNodeReferences;
 
 mod data_dynamic;
 mod data_static;
@@ -16,7 +10,6 @@ mod data_graph;
 use data_dynamic::*;
 use data_static::*;
 use data_graph::*;
-use petgraph::visit::IntoNodeReferences;
 
 #[component]
 pub fn App() -> impl IntoView {
