@@ -147,26 +147,24 @@ pub fn App() -> impl IntoView {
             {move || match route_data.get() {
                 Err(err) => view! { <p>{ err }</p> }.into_view(),
                 Ok(values) => view! {
-                    <TableContainer>
-                        <Table bordered=true hoverable=true>
-                            <Thead>
-                                <Tr>
-                                    <Th>"System"</Th>
-                                    <Th>"Connection"</Th>
-                                </Tr>
-                            </Thead>
-                            <Tbody>
-                                {values.into_iter().map(|(system, connection) : (System, Connection)| {
-                                    view! {
-                                        <Tr>
-                                            <Td>{ format!("{:?}", system) }</Td>
-                                            <Td>{ format!("{:?}", connection) }</Td>
-                                        </Tr>
-                                    }
-                                }).collect_view()}
-                            </Tbody>
-                        </Table>
-                    </TableContainer>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>"System"</th>
+                                <th>"Connection"</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {values.into_iter().map(|(system, connection) : (System, Connection)| {
+                                view! {
+                                    <tr>
+                                        <td>{ format!("{:?}", system) }</td>
+                                        <td>{ format!("{:?}", connection) }</td>
+                                    </tr>
+                                }
+                            }).collect_view()}
+                        </tbody>
+                    </table>
                 }.into_view(),
             }}
 
