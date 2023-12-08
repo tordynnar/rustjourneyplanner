@@ -7,10 +7,12 @@ use itertools::Itertools;
 mod data_dynamic;
 mod data_static;
 mod data_graph;
+mod error;
 
 use data_dynamic::*;
 use data_static::*;
 use data_graph::*;
+use error::*;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -20,13 +22,6 @@ pub fn App() -> impl IntoView {
 
     let tripwire_data = create_local_resource(|| (), |_| async move {
         get_tripwire_data().await
-    });
-
-    let graph_data = Signal::derive(move ||  {
-        get_graph_data(
-            static_data.get().map_or_else(|| Err(format!("Static data loading...")), |v| v)?,
-            tripwire_data.get().map_or_else(|| Err(format!("Tripwire data loading...")), |v| v)?
-        )
     });
 
     let systems_data = Signal::derive(move ||  {
@@ -40,14 +35,21 @@ pub fn App() -> impl IntoView {
         }
     });
 
+    let graph_data = Signal::derive(move ||  {
+        get_graph_data(
+            static_data.get().map_or_else(|| Err(loadingerror("Loading static data")), |v| v.map_err(|e| criticalerror(e)))?,
+            tripwire_data.get().map_or_else(|| Err(loadingerror("Loading wormhole data")), |v| v.map_err(|e| criticalerror(e)))?
+        ).map_err(|e| criticalerror(e))
+    });
+
     let (from_system, set_from_system) = create_signal(Option::<System>::None);
     let (to_system, set_to_system) = create_signal(Option::<System>::None);
     let (avoid_systems, set_avoid_systems) = create_signal(Vec::<System>::new());
     
-    let route_data = Signal::derive(move || -> Result<Vec<(System,Connection)>,String> {
+    let route_data = Signal::derive(move || -> Result<Vec<(System,Connection)>,ErrorStatus> {
         let graph = graph_data.get()?;
-        let from_system_value = from_system.get().ok_or_else(|| format!("From system not selected"))?;
-        let to_system_value = to_system.get().ok_or_else(|| format!("To system not selected"))?;
+        let from_system_value = from_system.get().ok_or_else(|| inputerror("From system not selected"))?;
+        let to_system_value = to_system.get().ok_or_else(|| inputerror("To system not selected"))?;
         let avoid_systems_value = avoid_systems.get();
 
         let filtered_graph = graph.filter_map(|_, system| {
@@ -58,11 +60,11 @@ pub fn App() -> impl IntoView {
 
         let (from_system_node, _) = filtered_graph.node_references().find(|(_, system)| {
             system.id == from_system_value.id
-        }).ok_or_else(|| format!("From system not in graph"))?;
+        }).ok_or_else(|| routingerror("From system not in graph, likely because it was removed by the filtering rules"))?;
 
         let (to_system_node, _) = filtered_graph.node_references().find(|(_, system)| {
             system.id == to_system_value.id
-        }).ok_or_else(|| format!("To system not in graph"))?;
+        }).ok_or_else(|| routingerror("To system not in graph, likely because it was removed by the filtering rules"))?;
 
         let (_, path) = algo::astar(
             &filtered_graph,
@@ -70,13 +72,13 @@ pub fn App() -> impl IntoView {
             |n| n == to_system_node,
             |_| 1,
             |_| 0,
-        ).ok_or_else(|| format!("No path between systems"))?;
+        ).ok_or_else(|| routingerror("No path between systems"))?;
 
         let path_details = path.into_iter().tuple_windows::<(_,_)>().map(|(n1, n2)| {
-            let connection = filtered_graph.edges_connecting(n1, n2).exactly_one().map_err(|_| format!("Cannot find edge connecting nodes in graph"))?.weight().clone();
+            let connection = filtered_graph.edges_connecting(n1, n2).exactly_one().map_err(|_| criticalerror("Cannot find edge connecting nodes in graph"))?.weight().clone();
             let node = filtered_graph[n2].clone();
             Ok((node, connection))
-        }).collect::<Result<Vec<_>,String>>()?;
+        }).collect::<Result<Vec<_>,ErrorStatus>>()?;
 
         Ok(path_details)
     });
@@ -145,7 +147,12 @@ pub fn App() -> impl IntoView {
             />
 
             {move || match route_data.get() {
-                Err(err) => view! { <p>{ err }</p> }.into_view(),
+                Err(err) => match err.category {
+                    ErrorCategory::Loading => view! { <Alert variant=AlertVariant::Info title=move || view! { "Loading" }.into_view() >{err.description}</Alert> }.into_view(),
+                    ErrorCategory::Input => view! { <Alert variant=AlertVariant::Warn title=move || view! { "Input error" }.into_view() >{err.description}</Alert> }.into_view(),
+                    ErrorCategory::Routing => view! { <Alert variant=AlertVariant::Warn title=move || view! { "Routing problem" }.into_view() >{err.description}</Alert> }.into_view(),
+                    ErrorCategory::Critical => view! { <Alert variant=AlertVariant::Danger title=move || view! { "Critical error" }.into_view() >{err.description}</Alert> }.into_view()
+                },
                 Ok(values) => view! {
                     <table>
                         <thead>
