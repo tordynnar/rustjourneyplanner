@@ -44,7 +44,7 @@ pub fn App() -> impl IntoView {
     let (to_system, set_to_system) = create_signal(Option::<System>::None);
     let (avoid_systems, set_avoid_systems) = create_signal(Vec::<System>::new());
     
-    let route_data = Signal::derive(move || -> Result<String,String> {
+    let route_data = Signal::derive(move || -> Result<Vec<(System,Connection)>,String> {
         let graph = graph_data.get()?;
         let from_system_value = from_system.get().ok_or_else(|| format!("From system not selected"))?;
         let to_system_value = to_system.get().ok_or_else(|| format!("To system not selected"))?;
@@ -78,7 +78,7 @@ pub fn App() -> impl IntoView {
             Ok((node, connection))
         }).collect::<Result<Vec<_>,String>>()?;
 
-        Ok(format!("{:?}", path_details))
+        Ok(path_details)
     });
 
     view! {
@@ -145,9 +145,31 @@ pub fn App() -> impl IntoView {
             />
 
             {move || match route_data.get() {
-                Ok(v) => view! { <p>{ v }</p> }.into_view(),
                 Err(err) => view! { <p>{ err }</p> }.into_view(),
+                Ok(values) => view! {
+                    <TableContainer>
+                        <Table bordered=true hoverable=true>
+                            <Thead>
+                                <Tr>
+                                    <Th>"System"</Th>
+                                    <Th>"Connection"</Th>
+                                </Tr>
+                            </Thead>
+                            <Tbody>
+                                {values.into_iter().map(|(system, connection) : (System, Connection)| {
+                                    view! {
+                                        <Tr>
+                                            <Td>{ format!("{:?}", system) }</Td>
+                                            <Td>{ format!("{:?}", connection) }</Td>
+                                        </Tr>
+                                    }
+                                }).collect_view()}
+                            </Tbody>
+                        </Table>
+                    </TableContainer>
+                }.into_view(),
             }}
+
         </Root>
     }
 }
