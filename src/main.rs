@@ -42,30 +42,29 @@ pub fn App() -> impl IntoView {
     let (from_system, set_from_system) = create_signal(Option::<System>::None);
     let (to_system, set_to_system) = create_signal(Option::<System>::None);
     let (avoid_systems, set_avoid_systems) = create_signal(Vec::<System>::new());
-
+    
     let route_data = Signal::derive(move || -> Result<String,String> {
         let graph = graph_data.get()?;
         let from_system_value = from_system.get().ok_or_else(|| format!("From system not selected"))?;
         let to_system_value = to_system.get().ok_or_else(|| format!("To system not selected"))?;
+        let avoid_systems_value = avoid_systems.get();
 
-        /*
         let filtered_graph = graph.filter_map(|_, system| {
-            Some(system.clone())
+            if avoid_systems_value.contains(system) { None } else { Some(system.clone()) }
         }, |_, wormhole| {
             Some(wormhole.clone())
         });
-        */
 
-        let (from_system_node, _) = graph.node_references().find(|(_, system)| {
+        let (from_system_node, _) = filtered_graph.node_references().find(|(_, system)| {
             system.id == from_system_value.id
         }).ok_or_else(|| format!("From system not in graph"))?;
 
-        let (to_system_node, _) = graph.node_references().find(|(_, system)| {
+        let (to_system_node, _) = filtered_graph.node_references().find(|(_, system)| {
             system.id == to_system_value.id
         }).ok_or_else(|| format!("To system not in graph"))?;
 
         let (_, path) = algo::astar(
-            &graph,
+            &filtered_graph,
             from_system_node,
             |n| n == to_system_node,
             |_| 1,
@@ -73,7 +72,7 @@ pub fn App() -> impl IntoView {
         ).ok_or_else(|| format!("No path between systems"))?;
 
         let path_systems = path.into_iter().map(|v| {
-            graph[v].clone()
+            filtered_graph[v].clone()
         }).collect::<Vec<_>>();
 
         Ok(format!("{:?}", path_systems))

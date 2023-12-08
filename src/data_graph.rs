@@ -6,7 +6,7 @@ use crate::data_dynamic::*;
 use crate::data_static::*;
 
 #[derive(Debug, Clone)]
-pub struct Wormhole {
+pub struct WormholeAttributes {
     pub signature : Option<String>,
     pub other_signature : Option<String>,
     pub wormhole_type : Option<String>,
@@ -16,8 +16,14 @@ pub struct Wormhole {
     pub jump_mass : Option<u32>
 }
 
-pub fn get_graph_data(static_data : StaticData, tripwire_data : Vec::<TripwireWormhole>) -> Result<Graph::<System, Option<Wormhole>>,String> {
-    let mut graph = Graph::<System, Option<Wormhole>>::new();
+#[derive(Debug, Clone)]
+pub enum Connection {
+    Wormhole(WormholeAttributes),
+    Gate
+}
+
+pub fn get_graph_data(static_data : StaticData, tripwire_data : Vec::<TripwireWormhole>) -> Result<Graph::<System, Connection>,String> {
+    let mut graph = Graph::<System, Connection>::new();
     let mut node_index = HashMap::<u32, NodeIndex>::new();
 
     for system in static_data.systems {
@@ -29,19 +35,24 @@ pub fn get_graph_data(static_data : StaticData, tripwire_data : Vec::<TripwireWo
         graph.add_edge(
             *node_index.get(&gate.from_system).ok_or_else(|| format!("Gate from system {} missing from static data", gate.from_system))?,
             *node_index.get(&gate.to_system).ok_or_else(|| format!("Gate to system {} missing from static data", gate.to_system))?,
-            None
+            Connection::Gate
         );
     }
 
     for wormhole in tripwire_data {
         let jump_mass = match wormhole.wormhole_type { None => None, Some(ref v) => static_data.wormhole_jump_mass.get(v).cloned() };
 
+        let to_system = match wormhole.to_system {
+            SystemOrClass::SpecificSystem(v) => v,
+            _ => continue
+        };
+
         let from_index = *node_index.get(&wormhole.from_system).ok_or_else(|| format!("Wormhole from system {} missing from static data", wormhole.from_system))?;
-        let to_index = *node_index.get(&wormhole.from_system).ok_or_else(|| format!("Wormhole from system {} missing from static data", wormhole.from_system))?;
+        let to_index = *node_index.get(&to_system).ok_or_else(|| format!("Wormhole from system {} missing from static data", to_system))?;
 
         graph.add_edge(
             from_index, to_index,
-            Some(Wormhole {
+            Connection::Wormhole(WormholeAttributes {
                 signature : wormhole.from_signature.clone(),
                 other_signature : wormhole.to_signature.clone(),
                 wormhole_type : wormhole.wormhole_type.clone(),
@@ -54,7 +65,7 @@ pub fn get_graph_data(static_data : StaticData, tripwire_data : Vec::<TripwireWo
 
         graph.add_edge(
             to_index, from_index,
-            Some(Wormhole {
+            Connection::Wormhole(WormholeAttributes {
                 signature : wormhole.to_signature,
                 other_signature : wormhole.from_signature,
                 wormhole_type : wormhole.wormhole_type,
