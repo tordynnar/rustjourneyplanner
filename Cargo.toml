@@ -13,6 +13,7 @@ codegen-units = 1
 
 [dependencies]
 chrono = "0.4.31"
+itertools = "0.12.0"
 leptonic = { path = "../leptonic/leptonic", features = ["csr"] }
 leptos = { version = "0.5.2", features = ["csr"] }
 leptos-use = "0.8.2"

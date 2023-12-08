@@ -2,6 +2,7 @@ use leptonic::prelude::*;
 use leptos::*;
 use petgraph::algo;
 use petgraph::visit::IntoNodeReferences;
+use itertools::Itertools;
 
 mod data_dynamic;
 mod data_static;
@@ -71,11 +72,13 @@ pub fn App() -> impl IntoView {
             |_| 0,
         ).ok_or_else(|| format!("No path between systems"))?;
 
-        let path_systems = path.into_iter().map(|v| {
-            filtered_graph[v].clone()
-        }).collect::<Vec<_>>();
+        let path_details = path.into_iter().tuple_windows::<(_,_)>().map(|(n1, n2)| {
+            let connection = filtered_graph.edges_connecting(n1, n2).exactly_one().map_err(|_| format!("Cannot find edge connecting nodes in graph"))?.weight().clone();
+            let node = filtered_graph[n2].clone();
+            Ok((node, connection))
+        }).collect::<Result<Vec<_>,String>>()?;
 
-        Ok(format!("{:?}", path_systems))
+        Ok(format!("{:?}", path_details))
     });
 
     view! {
