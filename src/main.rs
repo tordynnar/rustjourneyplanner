@@ -104,7 +104,7 @@ pub fn App() -> impl IntoView {
                 render_option=move |o : System| format!("{}", o.name)
                 selected=move || from_system.get()
                 set_selected=move |v| set_from_system.set(v)
-                allow_deselect=false
+                allow_deselect=true
             />
 
             <OptionalSelect
@@ -124,7 +124,7 @@ pub fn App() -> impl IntoView {
                 render_option=move |o : System| format!("{}", o.name)
                 selected=move || to_system.get()
                 set_selected=move |v| set_to_system.set(v)
-                allow_deselect=false
+                allow_deselect=true
             />
 
             <Multiselect
