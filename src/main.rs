@@ -1,3 +1,5 @@
+#![feature(array_try_map)]
+
 use leptonic::prelude::*;
 use leptos::*;
 use petgraph::algo;
@@ -193,6 +195,12 @@ pub fn App() -> impl IntoView {
 }
 
 fn main() {
+    console_error_panic_hook::set_once();
+    tracing_wasm::set_as_global_default_with_config(
+        tracing_wasm::WASMLayerConfigBuilder::default()
+            .set_max_level(tracing::Level::TRACE)
+            .build(),
+    );
     mount_to_body(|| {
         view! { <App/>}
     });

@@ -14,6 +14,7 @@ codegen-units = 1
 
 [dependencies]
 chrono = "0.4.31"
+console_error_panic_hook = "0.1.7"
 eve_sde = { path = "tools/eve_sde" }
 itertools = "0.12.0"
 leptonic = { path = "../leptonic/leptonic", features = ["csr"] }
@@ -24,6 +25,7 @@ petgraph = "0.6.4"
 reqwest = "0.11.22"
 serde_json = "1.0.108"
 tracing = "0.1.40"
+tracing-wasm = "0.2.1"
 uuid = { version = "1.6.1", features = ["v4", "js", "serde"] }
 web-sys = "0.3.66"
 

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use chrono::NaiveDateTime;
 use petgraph::graph::{Graph, NodeIndex};
 use eve_sde::System;
+use tracing::{info,warn};
 
 use crate::tripwire::{WormholeLife,WormholeMass,TripwireWormhole,SystemOrClass};
 
@@ -23,6 +24,8 @@ pub enum Connection {
 }
 
 pub fn get_graph_data(sde : Vec<System>, tripwire_data : Vec::<TripwireWormhole>) -> Result<Graph::<System, Connection>,String> {
+    info!("Constructing graph of systems, gates and wormholes");
+
     let mut graph = Graph::<System, Connection>::new();
     let mut node_index = HashMap::<u32, NodeIndex>::new();
 
@@ -47,11 +50,13 @@ pub fn get_graph_data(sde : Vec<System>, tripwire_data : Vec::<TripwireWormhole>
             _ => continue
         };
 
-        let from_index = *node_index.get(&wormhole.from_system).ok_or_else(|| format!("Wormhole from system {} missing from static data", wormhole.from_system))?;
-        let to_index = *node_index.get(&to_system).ok_or_else(|| format!("Wormhole from system {} missing from static data", to_system))?;
+        let [from_index, to_index] = match [wormhole.from_system, to_system].try_map(|s| { node_index.get(&s) }) {
+            Some(s) => s,
+            None => { warn!("Tripwire has a system not in the SDE"); continue; }
+        };
 
         graph.add_edge(
-            from_index, to_index,
+            *from_index, *to_index,
             Connection::Wormhole(WormholeAttributes {
                 signature : wormhole.from_signature.clone(),
                 other_signature : wormhole.to_signature.clone(),
@@ -64,7 +69,7 @@ pub fn get_graph_data(sde : Vec<System>, tripwire_data : Vec::<TripwireWormhole>
         );
 
         graph.add_edge(
-            to_index, from_index,
+            *to_index, *from_index,
             Connection::Wormhole(WormholeAttributes {
                 signature : wormhole.to_signature,
                 other_signature : wormhole.from_signature,
