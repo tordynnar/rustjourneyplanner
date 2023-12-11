@@ -3,30 +3,42 @@ use leptos::*;
 use petgraph::algo;
 use petgraph::visit::IntoNodeReferences;
 use itertools::Itertools;
+use web_sys;
 use eve_sde::*;
 
 mod data_dynamic;
-mod data_static;
 mod data_graph;
 mod error;
 
 use data_dynamic::*;
-use data_static::*;
 use data_graph::*;
 use error::*;
 
+pub async fn get_sde() -> Result<Vec<System>, String> {
+    let baseurl = web_sys::window().ok_or_else(|| format!("Cannot get base URL"))?.origin();
+
+    let result = reqwest::get(format!("{baseurl}/sde.json")).await
+        .map_err(|_| format!("Failed to send request for sde.json"))?
+        .error_for_status().map_err(|_| format!("Bad status code getting sde.json"))?
+        .text().await
+        .map_err(|_| format!("Failed to get bytes for sde.json"))?;
+
+    serde_json::from_str::<Vec<System>>(&result)
+        .map_err(|e| format!("Failed to parse sde.json JSON: {:?}", e))
+}
+
 #[component]
 pub fn App() -> impl IntoView {
-    let static_data = create_local_resource(|| (), |_| async {
-        get_static_data().await
+    let sde = create_local_resource(|| (), |_| async {
+        get_sde().await
     });
 
-    let tripwire_data = create_local_resource(|| (), |_| async move {
-        get_tripwire_data().await
+    let tripwire = create_local_resource(|| (), |_| async move {
+        get_tripwire().await
     });
 
-    let systems_data = Signal::derive(move ||  {
-        match static_data.get() {
+    let systems = Signal::derive(move ||  {
+        match sde.get() {
             Some(Ok(v)) => {
                 let mut s : Vec<System> = v.clone();
                 s.sort();
@@ -38,8 +50,8 @@ pub fn App() -> impl IntoView {
 
     let graph_data = Signal::derive(move ||  {
         get_graph_data(
-            static_data.get().map_or_else(|| Err(loadingerror("Loading static data")), |v| v.map_err(|e| criticalerror(e)))?,
-            tripwire_data.get().map_or_else(|| Err(loadingerror("Loading wormhole data")), |v| v.map_err(|e| criticalerror(e)))?
+            sde.get().map_or_else(|| Err(loadingerror("Loading static data")), |v| v.map_err(|e| criticalerror(e)))?,
+            tripwire.get().map_or_else(|| Err(loadingerror("Loading wormhole data")), |v| v.map_err(|e| criticalerror(e)))?
         ).map_err(|e| criticalerror(e))
     });
 
@@ -89,7 +101,7 @@ pub fn App() -> impl IntoView {
             <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark/>
             
             <OptionalSelect
-                options=systems_data
+                options=systems
                 search_text_provider=move |o : System| o.name
                 search_filter_provider=move |(s, o) : (String, Vec<System>)| {
                     let lowercased_search = s.to_lowercase();
@@ -109,7 +121,7 @@ pub fn App() -> impl IntoView {
             />
 
             <OptionalSelect
-                options=systems_data
+                options=systems
                 search_text_provider=move |o : System| o.name
                 search_filter_provider=move |(s, o) : (String, Vec<System>)| {
                     let lowercased_search = s.to_lowercase();
@@ -129,7 +141,7 @@ pub fn App() -> impl IntoView {
             />
 
             <Multiselect
-                options=systems_data
+                options=systems
                 search_text_provider=move |o : System| o.name
                 search_filter_provider=move |(s, o) : (String, Vec<System>)| {
                     let lowercased_search = s.to_lowercase();

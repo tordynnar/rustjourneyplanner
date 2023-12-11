@@ -22,15 +22,15 @@ pub enum Connection {
     Gate
 }
 
-pub fn get_graph_data(static_data : Vec<System>, tripwire_data : Vec::<TripwireWormhole>) -> Result<Graph::<System, Connection>,String> {
+pub fn get_graph_data(sde : Vec<System>, tripwire_data : Vec::<TripwireWormhole>) -> Result<Graph::<System, Connection>,String> {
     let mut graph = Graph::<System, Connection>::new();
     let mut node_index = HashMap::<u32, NodeIndex>::new();
 
-    for system in &static_data {
+    for system in &sde {
         node_index.insert(system.id, graph.add_node(system.clone()));
     }
 
-    for system in &static_data {
+    for system in &sde {
         let index1 = *node_index.get(&system.id).ok_or_else(|| format!("Gate from system {} missing from static data", system.id))?;
         for neighbour in &system.neighbours {
             let index2 = *node_index.get(neighbour).ok_or_else(|| format!("Gate to system {} missing from static data", neighbour))?;
