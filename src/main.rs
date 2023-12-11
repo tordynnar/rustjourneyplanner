@@ -33,33 +33,16 @@ pub async fn get_sde() -> Result<Vec<System>, String> {
         .map_err(|e| format!("Failed to parse sde.json JSON: {:?}", e))
 }
 
-#[component]
-pub fn SystemSelect(
-    #[prop(into)] options: MaybeSignal<Vec<System>>,
-    #[prop(into)] selected: Signal<Option<System>>,
-    #[prop(into)] set_selected: Out<Option<System>>
-) -> impl IntoView {
-    view! {
-        <OptionalSelect
-            options=options
-            search_text_provider=move |o : System| o.name
-            search_filter_provider=move |(s, o) : (String, Vec<System>)| {
-                let lowercased_search = s.to_lowercase();
-                o.into_iter()
-                    .filter(|it| {
-                        it.name
-                            .to_lowercase()
-                            .starts_with(lowercased_search.as_str())
-                    })
-                    .take(20)
-                    .collect::<Vec<_>>()
-            }
-            render_option=move |o : System| format!("{}", o.name)
-            selected=selected
-            set_selected=set_selected
-            allow_deselect=true
-        />
-    }
+fn system_search_filter((s, o) : (String, Vec<System>)) -> Vec<System> {
+    let lowercased_search = s.to_lowercase();
+    o.into_iter()
+        .filter(|it| {
+            it.name
+                .to_lowercase()
+                .starts_with(lowercased_search.as_str())
+        })
+        .take(20)
+        .collect::<Vec<System>>()
 }
 
 #[component]
@@ -133,32 +116,30 @@ pub fn App() -> impl IntoView {
         <Root default_theme=LeptonicTheme::default()>
             <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark/>
             
-            <SystemSelect
+            <OptionalSelect
                 options=systems
+                search_text_provider=move |o : System| o.name
+                search_filter_provider=system_search_filter
+                render_option=move |o : System| format!("{}", o.name)
                 selected=move || from_system.get()
                 set_selected=move |v| set_from_system.set(v)
+                allow_deselect=true
             />
 
-            <SystemSelect
+            <OptionalSelect
                 options=systems
+                search_text_provider=move |o : System| o.name
+                search_filter_provider=system_search_filter
+                render_option=move |o : System| format!("{}", o.name)
                 selected=move || to_system.get()
                 set_selected=move |v| set_to_system.set(v)
+                allow_deselect=true
             />
 
             <Multiselect
                 options=systems
                 search_text_provider=move |o : System| o.name
-                search_filter_provider=move |(s, o) : (String, Vec<System>)| {
-                    let lowercased_search = s.to_lowercase();
-                    o.into_iter()
-                        .filter(|it| {
-                            it.name
-                                .to_lowercase()
-                                .starts_with(lowercased_search.as_str())
-                        })
-                        .take(20)
-                        .collect::<Vec<_>>()
-                }
+                search_filter_provider=system_search_filter
                 render_option=move |o : System| format!("{}", o.name)
                 selected=move || avoid_systems.get()
                 set_selected=move |v| set_avoid_systems.set(v)

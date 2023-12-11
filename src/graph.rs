@@ -26,7 +26,7 @@ pub enum Connection {
 
 pub fn get_graph(sde : Vec<System>, tripwire_data : Vec::<TripwireWormhole>) -> NeverEq<Graph::<System, Connection>> {
     info!("Constructing graph of systems, gates and wormholes");
-
+    
     let mut graph = Graph::<System, Connection>::new();
     let mut node_index = HashMap::<u32, NodeIndex>::new();
 
