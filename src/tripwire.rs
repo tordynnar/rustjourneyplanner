@@ -41,7 +41,7 @@ pub enum SystemOrClass {
     Class5,
     Class6,
     Class13,
-    Trig,
+    Pochven,
     Unknown
 }
 
@@ -59,7 +59,7 @@ impl From<Option<u32>> for SystemOrClass {
             Some(7) => SystemOrClass::Class5,
             Some(8) => SystemOrClass::Class6,
             Some(9) => SystemOrClass::Class13,
-            Some(10) => SystemOrClass::Trig,
+            Some(10) => SystemOrClass::Pochven,
             Some(v) => SystemOrClass::SpecificSystem(v)
         }
     }

@@ -6,12 +6,12 @@ use itertools::Itertools;
 use web_sys;
 use eve_sde::*;
 
-mod data_dynamic;
-mod data_graph;
+mod tripwire;
+mod graph;
 mod error;
 
-use data_dynamic::*;
-use data_graph::*;
+use tripwire::*;
+use graph::*;
 use error::*;
 
 pub async fn get_sde() -> Result<Vec<System>, String> {

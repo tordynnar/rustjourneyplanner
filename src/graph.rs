@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use chrono::NaiveDateTime;
 use petgraph::graph::{Graph, NodeIndex};
-use eve_sde::*;
+use eve_sde::System;
 
-use crate::data_dynamic::*;
+use crate::tripwire::{WormholeLife,WormholeMass,TripwireWormhole,SystemOrClass};
 
 #[derive(Debug, Clone)]
 pub struct WormholeAttributes {
@@ -31,17 +31,16 @@ pub fn get_graph_data(sde : Vec<System>, tripwire_data : Vec::<TripwireWormhole>
     }
 
     for system in &sde {
-        let index1 = *node_index.get(&system.id).ok_or_else(|| format!("Gate from system {} missing from static data", system.id))?;
+        let index1 = *node_index.get(&system.id).unwrap(); // Can't be missing, we just added it
         for neighbour in &system.neighbours {
-            let index2 = *node_index.get(neighbour).ok_or_else(|| format!("Gate to system {} missing from static data", neighbour))?;
+            let index2 = *node_index.get(neighbour).unwrap(); // Guaranteed consistent by eve_sde crate
             graph.add_edge(index1, index2, Connection::Gate);
             graph.add_edge(index2, index1, Connection::Gate);
         }
     }
 
     for wormhole in tripwire_data {
-        //let jump_mass = match wormhole.wormhole_type { None => None, Some(ref v) => static_data.wormhole_jump_mass.get(v).cloned() };
-        let jump_mass = None;
+        let jump_mass = None; // TODO
 
         let to_system = match wormhole.to_system {
             SystemOrClass::SpecificSystem(v) => v,
