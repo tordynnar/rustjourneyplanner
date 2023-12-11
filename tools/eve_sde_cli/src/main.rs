@@ -163,10 +163,10 @@ fn main() {
                 let rawclass = system.class
                     .or(constellation.class)
                     .or(region.class)
-                    .or(match name.as_ref() { "Zarzakh" => Some(Class::Zarzakh as u8), _ => None })
+                    .or(match name.as_ref() { "Zarzakh" => Some(SystemClass::Zarzakh as u8), _ => None })
                     .expect("No class for system");
 
-                let class = Class::try_from(rawclass).expect("Unexpected class");
+                let class = SystemClass::try_from(rawclass).expect("Unexpected class");
 
                 let systemresult = System { id : system.id, name, security, neighbours, class };
                 println!("{:?}", systemresult);

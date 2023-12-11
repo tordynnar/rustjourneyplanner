@@ -5,7 +5,7 @@ use std::cmp::Ordering;
 
 #[derive(Debug, Clone, Serialize_repr, Deserialize_repr, Eq, PartialEq, TryFromPrimitive)]
 #[repr(u8)]
-pub enum Class {
+pub enum SystemClass {
     C1 = 1,
     C2 = 2,
     C3 = 3,
@@ -31,7 +31,7 @@ pub struct System {
     pub id : u32,
     pub name : String,
     pub security : i8,
-    pub class : Class,
+    pub class : SystemClass,
     pub neighbours : Vec<u32> // Neighbours are not repeated on both sides
 }
 

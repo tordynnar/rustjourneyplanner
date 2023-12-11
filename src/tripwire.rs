@@ -4,13 +4,13 @@ use chrono::{NaiveDateTime, Utc, Duration};
 use web_sys;
 use tracing::info;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum WormholeLife {
     Stable,
     EOL
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum WormholeMass {
     Stable,
     Destab,
@@ -67,7 +67,7 @@ impl From<Option<u32>> for SystemOrClass {
 }
 
 pub async fn get_tripwire() -> Result<Vec::<TripwireWormhole>, String> {
-    info!("Downloading the Tripwire wormholes");
+    info!("Downloading Tripwire wormholes");
     
     let mut data = Vec::<TripwireWormhole>::new();
 

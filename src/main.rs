@@ -85,11 +85,22 @@ pub fn App() -> impl IntoView {
         let from_system_value = from_system.get().ok_or_else(|| inputerror("From system not selected"))?;
         let to_system_value = to_system.get().ok_or_else(|| inputerror("To system not selected"))?;
         let avoid_systems_value = avoid_systems.get();
+        let exclude_lowsec_value = exclude_lowsec.get();
+        let exclude_nullsec_value = exclude_nullsec.get();
+        let exclude_voc_value = exclude_voc.get();
+        let exclude_eol_value = exclude_eol.get();
 
         let filtered_graph = graph.filter_map(|_, system| {
-            if avoid_systems_value.contains(system) { None } else { Some(system.clone()) }
-        }, |_, wormhole| {
-            Some(wormhole.clone())
+            if avoid_systems_value.contains(system) { return None }
+            if exclude_lowsec_value && system.class == SystemClass::Lowsec { return None }
+            if exclude_nullsec_value && system.class == SystemClass::Nullsec { return None }
+            Some(system.clone())
+        }, |_, connection| {
+            if let Connection::Wormhole(wormhole) = connection {
+                if exclude_voc_value && wormhole.mass == WormholeMass::VOC { return None }
+                if exclude_eol_value && wormhole.life == WormholeLife::EOL { return None }
+            }
+            Some(connection.clone())
         });
 
         let (from_system_node, _) = filtered_graph.node_references().find(|(_, system)| {
@@ -100,6 +111,7 @@ pub fn App() -> impl IntoView {
             system.id == to_system_value.id
         }).ok_or_else(|| routingerror("To system not in graph. It was probably removed by the filtering rules."))?;
 
+        info!("Calculating shortest path");
         let (_, path) = algo::astar(
             &filtered_graph,
             from_system_node,
@@ -136,10 +148,7 @@ pub fn App() -> impl IntoView {
                 </div>
             </AppBar>
 
-
-
             <div id="container">
-
                 <Grid spacing=Size::Em(0.6)>
                     <Row>
                         <Col md=3>
