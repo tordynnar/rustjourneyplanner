@@ -13,6 +13,7 @@ use data_dynamic::*;
 use data_static::*;
 use data_graph::*;
 use error::*;
+use eve_sde::*;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -27,8 +28,8 @@ pub fn App() -> impl IntoView {
     let systems_data = Signal::derive(move ||  {
         match static_data.get() {
             Some(Ok(v)) => {
-                let mut s : Vec<System> = v.systems.iter().map(|v| v.clone()).collect();
-                s.sort_by(|s1, s2| s1.name.cmp(&s2.name));
+                let mut s : Vec<System> = v.clone();
+                s.sort();
                 s
             },
             None | Some(Err(_)) => Vec::<System>::new()
