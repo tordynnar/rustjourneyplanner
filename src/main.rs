@@ -2,6 +2,7 @@
 
 use leptonic::prelude::*;
 use leptos::*;
+use leptos_icons::BsIcon;
 use petgraph::algo;
 use petgraph::visit::IntoNodeReferences;
 use itertools::Itertools;
@@ -74,6 +75,10 @@ pub fn App() -> impl IntoView {
     let (from_system, set_from_system) = create_signal(Option::<System>::None);
     let (to_system, set_to_system) = create_signal(Option::<System>::None);
     let (avoid_systems, set_avoid_systems) = create_signal(Vec::<System>::new());
+    let (exclude_lowsec, set_exclude_lowsec) = create_signal(false);
+    let (exclude_nullsec, set_exclude_nullsec) = create_signal(false);
+    let (exclude_voc, set_exclude_voc) = create_signal(false);
+    let (exclude_eol, set_exclude_eol) = create_signal(false);
     
     let route = Signal::derive(move || -> Result<Vec<(System,Connection)>,ErrorStatus> {
         let graph = graph.get()?.value;
@@ -114,66 +119,132 @@ pub fn App() -> impl IntoView {
 
     view! {
         <Root default_theme=LeptonicTheme::default()>
-            <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark/>
-            
-            <OptionalSelect
-                options=systems
-                search_text_provider=move |o : System| o.name
-                search_filter_provider=system_search_filter
-                render_option=move |o : System| format!("{}", o.name)
-                selected=move || from_system.get()
-                set_selected=move |v| set_from_system.set(v)
-                allow_deselect=true
-            />
+            <AppBar id="app-bar" height=Height::Em(3.5)>
+                <div id="app-bar-content">
+                    <Stack id="left" orientation=StackOrientation::Horizontal spacing=Size::Zero>
+                        <H3 style="margin: 0 0 0 0.5em">
+                            "Journey Planner"
+                        </H3>
+                    </Stack>
 
-            <OptionalSelect
-                options=systems
-                search_text_provider=move |o : System| o.name
-                search_filter_provider=system_search_filter
-                render_option=move |o : System| format!("{}", o.name)
-                selected=move || to_system.get()
-                set_selected=move |v| set_to_system.set(v)
-                allow_deselect=true
-            />
+                    <Stack id="right" orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
+                            <LinkExt href="https://github.com/tordynnar/rustjourneyplanner" target=LinkExtTarget::Blank>
+                                <Icon id="github-icon" icon=BsIcon::BsGithub aria_label="GitHub icon"/>
+                            </LinkExt>
+                            <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark style="margin-right: 1em"/>
+                    </Stack>
+                </div>
+            </AppBar>
 
-            <Multiselect
-                options=systems
-                search_text_provider=move |o : System| o.name
-                search_filter_provider=system_search_filter
-                render_option=move |o : System| format!("{}", o.name)
-                selected=move || avoid_systems.get()
-                set_selected=move |v| set_avoid_systems.set(v)
-            />
 
-            {move || match route.get() {
-                Err(err) => match err.category {
-                    ErrorCategory::Loading => view! { <Alert variant=AlertVariant::Info title=move || view! { "Loading" }.into_view() >{err.description}</Alert> }.into_view(),
-                    ErrorCategory::Input => view! { <Alert variant=AlertVariant::Warn title=move || view! { "Input Error" }.into_view() >{err.description}</Alert> }.into_view(),
-                    ErrorCategory::Routing => view! { <Alert variant=AlertVariant::Warn title=move || view! { "Routing Problem" }.into_view() >{err.description}</Alert> }.into_view(),
-                    ErrorCategory::Critical => view! { <Alert variant=AlertVariant::Danger title=move || view! { "Critical Error" }.into_view() >{err.description}</Alert> }.into_view()
-                },
-                Ok(values) => view! {
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>"System"</th>
-                                <th>"Connection"</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {values.into_iter().map(|(system, connection) : (System, Connection)| {
-                                view! {
-                                    <tr>
-                                        <td>{ format!("{:?}", system) }</td>
-                                        <td>{ format!("{:?}", connection) }</td>
-                                    </tr>
-                                }
-                            }).collect_view()}
-                        </tbody>
-                    </table>
-                }.into_view(),
-            }}
 
+            <div id="container">
+
+                <Grid spacing=Size::Em(0.6)>
+                    <Row>
+                        <Col md=3>
+                            <div style="width: 100%;">
+                                <div style="margin-bottom: 5px;">"From System"</div>
+                                <OptionalSelect
+                                    options=systems
+                                    search_text_provider=move |o : System| o.name
+                                    search_filter_provider=system_search_filter
+                                    render_option=move |o : System| format!("{}", o.name)
+                                    selected=move || from_system.get()
+                                    set_selected=move |v| set_from_system.set(v)
+                                    allow_deselect=true
+                                />
+                            </div>
+                        </Col>
+                        <Col md=3>
+                            <div style="width: 100%;">
+                                <div style="margin-bottom: 5px;">"To System"</div>
+                                <OptionalSelect
+                                    options=systems
+                                    search_text_provider=move |o : System| o.name
+                                    search_filter_provider=system_search_filter
+                                    render_option=move |o : System| format!("{}", o.name)
+                                    selected=move || to_system.get()
+                                    set_selected=move |v| set_to_system.set(v)
+                                    allow_deselect=true
+                                />
+                            </div>
+                        </Col>
+                    </Row>
+                    <Row>
+                        <Col md=12>
+                            <div style="width: 100%;">
+                                <div style="margin-bottom: 5px;">"Avoid Systems"</div>
+                                <Multiselect
+                                    options=systems
+                                    search_text_provider=move |o : System| o.name
+                                    search_filter_provider=system_search_filter
+                                    render_option=move |o : System| format!("{}", o.name)
+                                    selected=move || avoid_systems.get()
+                                    set_selected=move |v| set_avoid_systems.set(v)
+                                />
+                            </div>
+                        </Col>
+                    </Row>
+                    <Row>
+                        <Col md=3>
+                            <div class="toggle">
+                                <Toggle state=exclude_lowsec set_state=set_exclude_lowsec/>
+                                <label>"Exclude Lowsec"</label>
+                            </div>
+                        </Col>
+                        <Col md=3>
+                            <div class="toggle">
+                                <Toggle state=exclude_voc set_state=set_exclude_voc/>
+                                <label>"Exclude VOC"</label>
+                            </div>
+                        </Col>
+                    </Row>
+                    <Row>
+                        <Col md=3>
+                            <div class="toggle">
+                                <Toggle state=exclude_nullsec set_state=set_exclude_nullsec/>
+                                <label>"Exclude Nullsec"</label>
+                            </div>
+                        </Col>
+                        <Col md=3>
+                            <div class="toggle">
+                                <Toggle state=exclude_eol set_state=set_exclude_eol/>
+                                <label>"Exclude EOL"</label>
+                            </div>
+                        </Col>
+                    </Row>
+                </Grid>
+
+                {move || match route.get() {
+                    Err(err) => match err.category {
+                        ErrorCategory::Loading => view! { <Alert variant=AlertVariant::Info title=move || view! { "Loading" }.into_view() >{err.description}</Alert> }.into_view(),
+                        ErrorCategory::Input => view! { <Alert variant=AlertVariant::Warn title=move || view! { "Input Error" }.into_view() >{err.description}</Alert> }.into_view(),
+                        ErrorCategory::Routing => view! { <Alert variant=AlertVariant::Warn title=move || view! { "Routing Problem" }.into_view() >{err.description}</Alert> }.into_view(),
+                        ErrorCategory::Critical => view! { <Alert variant=AlertVariant::Danger title=move || view! { "Critical Error" }.into_view() >{err.description}</Alert> }.into_view()
+                    },
+                    Ok(values) => view! {
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>"System"</th>
+                                    <th>"Connection"</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {values.into_iter().map(|(system, connection) : (System, Connection)| {
+                                    view! {
+                                        <tr>
+                                            <td>{ format!("{:?}", system) }</td>
+                                            <td>{ format!("{:?}", connection) }</td>
+                                        </tr>
+                                    }
+                                }).collect_view()}
+                            </tbody>
+                        </table>
+                    }.into_view(),
+                }}
+            </div>
         </Root>
     }
 }
