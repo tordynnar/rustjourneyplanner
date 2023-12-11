@@ -5,18 +5,22 @@ use leptos::*;
 use petgraph::algo;
 use petgraph::visit::IntoNodeReferences;
 use itertools::Itertools;
+use tracing::info;
 use web_sys;
 use eve_sde::*;
 
 mod tripwire;
 mod graph;
 mod error;
+mod nevereq;
 
 use tripwire::*;
 use graph::*;
 use error::*;
 
 pub async fn get_sde() -> Result<Vec<System>, String> {
+    info!("Downloading SDE data");
+
     let baseurl = web_sys::window().ok_or_else(|| format!("Cannot get base URL"))?.origin();
 
     let result = reqwest::get(format!("{baseurl}/sde.json")).await
@@ -50,19 +54,30 @@ pub fn App() -> impl IntoView {
         }
     });
 
-    let graph_data = Signal::derive(move ||  {
-        get_graph_data(
+    
+    let graph_data = create_memo(move |_|  {
+        Ok(get_graph(
             sde.get().map_or_else(|| Err(loadingerror("Loading static data")), |v| v.map_err(|e| criticalerror(e)))?,
             tripwire.get().map_or_else(|| Err(loadingerror("Loading wormhole data")), |v| v.map_err(|e| criticalerror(e)))?
-        ).map_err(|e| criticalerror(e))
+        ))
     });
+    
+
+    /*
+    let graph_data = Signal::derive(move ||  {
+        Ok(get_graph(
+            sde.get().map_or_else(|| Err(loadingerror("Loading static data")), |v| v.map_err(|e| criticalerror(e)))?,
+            tripwire.get().map_or_else(|| Err(loadingerror("Loading wormhole data")), |v| v.map_err(|e| criticalerror(e)))?
+        ))
+    });
+    */
 
     let (from_system, set_from_system) = create_signal(Option::<System>::None);
     let (to_system, set_to_system) = create_signal(Option::<System>::None);
     let (avoid_systems, set_avoid_systems) = create_signal(Vec::<System>::new());
     
     let route_data = Signal::derive(move || -> Result<Vec<(System,Connection)>,ErrorStatus> {
-        let graph = graph_data.get()?;
+        let graph = graph_data.get()?.value;
         let from_system_value = from_system.get().ok_or_else(|| inputerror("From system not selected"))?;
         let to_system_value = to_system.get().ok_or_else(|| inputerror("To system not selected"))?;
         let avoid_systems_value = avoid_systems.get();

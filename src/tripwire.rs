@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::convert::From;
 use chrono::{NaiveDateTime, Utc, Duration};
 use web_sys;
+use tracing::info;
 
 #[derive(Debug, Clone)]
 pub enum WormholeLife {
@@ -66,6 +67,8 @@ impl From<Option<u32>> for SystemOrClass {
 }
 
 pub async fn get_tripwire() -> Result<Vec::<TripwireWormhole>, String> {
+    info!("Downloading the Tripwire wormholes");
+    
     let mut data = Vec::<TripwireWormhole>::new();
 
     let baseurl = web_sys::window().ok_or_else(|| format!("Cannot get base URL"))?.origin();

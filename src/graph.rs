@@ -4,7 +4,8 @@ use petgraph::graph::{Graph, NodeIndex};
 use eve_sde::System;
 use tracing::{info,warn};
 
-use crate::tripwire::{WormholeLife,WormholeMass,TripwireWormhole,SystemOrClass};
+use crate::tripwire::*;
+use crate::nevereq::*;
 
 #[derive(Debug, Clone)]
 pub struct WormholeAttributes {
@@ -23,7 +24,7 @@ pub enum Connection {
     Gate
 }
 
-pub fn get_graph_data(sde : Vec<System>, tripwire_data : Vec::<TripwireWormhole>) -> Result<Graph::<System, Connection>,String> {
+pub fn get_graph(sde : Vec<System>, tripwire_data : Vec::<TripwireWormhole>) -> NeverEq<Graph::<System, Connection>> {
     info!("Constructing graph of systems, gates and wormholes");
 
     let mut graph = Graph::<System, Connection>::new();
@@ -82,5 +83,5 @@ pub fn get_graph_data(sde : Vec<System>, tripwire_data : Vec::<TripwireWormhole>
         );
     }
 
-    Ok(graph)
+    NeverEq::<Graph::<System, Connection>> { value : graph }
 }
