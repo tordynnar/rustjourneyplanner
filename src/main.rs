@@ -46,9 +46,7 @@ pub fn App() -> impl IntoView {
     let systems = Signal::derive(move ||  {
         match sde.get() {
             Some(Ok(v)) => {
-                let mut s : Vec<System> = v.clone();
-                s.sort();
-                s
+                let mut s : Vec<System> = v.clone(); s.sort(); s
             },
             None | Some(Err(_)) => Vec::<System>::new()
         }
