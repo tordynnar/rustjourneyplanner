@@ -34,6 +34,35 @@ pub async fn get_sde() -> Result<Vec<System>, String> {
 }
 
 #[component]
+pub fn SystemSelect(
+    #[prop(into)] options: MaybeSignal<Vec<System>>,
+    #[prop(into)] selected: Signal<Option<System>>,
+    #[prop(into)] set_selected: Out<Option<System>>
+) -> impl IntoView {
+    view! {
+        <OptionalSelect
+            options=options
+            search_text_provider=move |o : System| o.name
+            search_filter_provider=move |(s, o) : (String, Vec<System>)| {
+                let lowercased_search = s.to_lowercase();
+                o.into_iter()
+                    .filter(|it| {
+                        it.name
+                            .to_lowercase()
+                            .starts_with(lowercased_search.as_str())
+                    })
+                    .take(20)
+                    .collect::<Vec<_>>()
+            }
+            render_option=move |o : System| format!("{}", o.name)
+            selected=selected
+            set_selected=set_selected
+            allow_deselect=true
+        />
+    }
+}
+
+#[component]
 pub fn App() -> impl IntoView {
     let sde = create_local_resource(|| (), |_| async {
         get_sde().await
@@ -77,11 +106,11 @@ pub fn App() -> impl IntoView {
 
         let (from_system_node, _) = filtered_graph.node_references().find(|(_, system)| {
             system.id == from_system_value.id
-        }).ok_or_else(|| routingerror("From system not in graph, likely because it was removed by the filtering rules"))?;
+        }).ok_or_else(|| routingerror("From system not in graph. It was probably removed by the filtering rules."))?;
 
         let (to_system_node, _) = filtered_graph.node_references().find(|(_, system)| {
             system.id == to_system_value.id
-        }).ok_or_else(|| routingerror("To system not in graph, likely because it was removed by the filtering rules"))?;
+        }).ok_or_else(|| routingerror("To system not in graph. It was probably removed by the filtering rules."))?;
 
         let (_, path) = algo::astar(
             &filtered_graph,
@@ -89,7 +118,7 @@ pub fn App() -> impl IntoView {
             |n| n == to_system_node,
             |_| 1,
             |_| 0,
-        ).ok_or_else(|| routingerror("No path between systems"))?;
+        ).ok_or_else(|| routingerror("No path between the systems"))?;
 
         let path_details = path.into_iter().tuple_windows::<(_,_)>().map(|(n1, n2)| {
             let connection = filtered_graph.edges_connecting(n1, n2).exactly_one().map_err(|_| criticalerror("Cannot find edge connecting nodes in graph"))?.weight().clone();
@@ -104,44 +133,16 @@ pub fn App() -> impl IntoView {
         <Root default_theme=LeptonicTheme::default()>
             <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark/>
             
-            <OptionalSelect
+            <SystemSelect
                 options=systems
-                search_text_provider=move |o : System| o.name
-                search_filter_provider=move |(s, o) : (String, Vec<System>)| {
-                    let lowercased_search = s.to_lowercase();
-                    o.into_iter()
-                        .filter(|it| {
-                            it.name
-                                .to_lowercase()
-                                .starts_with(lowercased_search.as_str())
-                        })
-                        .take(20)
-                        .collect::<Vec<_>>()
-                }
-                render_option=move |o : System| format!("{}", o.name)
                 selected=move || from_system.get()
                 set_selected=move |v| set_from_system.set(v)
-                allow_deselect=true
             />
 
-            <OptionalSelect
+            <SystemSelect
                 options=systems
-                search_text_provider=move |o : System| o.name
-                search_filter_provider=move |(s, o) : (String, Vec<System>)| {
-                    let lowercased_search = s.to_lowercase();
-                    o.into_iter()
-                        .filter(|it| {
-                            it.name
-                                .to_lowercase()
-                                .starts_with(lowercased_search.as_str())
-                        })
-                        .take(20)
-                        .collect::<Vec<_>>()
-                }
-                render_option=move |o : System| format!("{}", o.name)
                 selected=move || to_system.get()
                 set_selected=move |v| set_to_system.set(v)
-                allow_deselect=true
             />
 
             <Multiselect
@@ -166,9 +167,9 @@ pub fn App() -> impl IntoView {
             {move || match route.get() {
                 Err(err) => match err.category {
                     ErrorCategory::Loading => view! { <Alert variant=AlertVariant::Info title=move || view! { "Loading" }.into_view() >{err.description}</Alert> }.into_view(),
-                    ErrorCategory::Input => view! { <Alert variant=AlertVariant::Warn title=move || view! { "Input error" }.into_view() >{err.description}</Alert> }.into_view(),
-                    ErrorCategory::Routing => view! { <Alert variant=AlertVariant::Warn title=move || view! { "Routing problem" }.into_view() >{err.description}</Alert> }.into_view(),
-                    ErrorCategory::Critical => view! { <Alert variant=AlertVariant::Danger title=move || view! { "Critical error" }.into_view() >{err.description}</Alert> }.into_view()
+                    ErrorCategory::Input => view! { <Alert variant=AlertVariant::Warn title=move || view! { "Input Error" }.into_view() >{err.description}</Alert> }.into_view(),
+                    ErrorCategory::Routing => view! { <Alert variant=AlertVariant::Warn title=move || view! { "Routing Problem" }.into_view() >{err.description}</Alert> }.into_view(),
+                    ErrorCategory::Critical => view! { <Alert variant=AlertVariant::Danger title=move || view! { "Critical Error" }.into_view() >{err.description}</Alert> }.into_view()
                 },
                 Ok(values) => view! {
                     <table>
