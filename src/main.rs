@@ -2,7 +2,7 @@
 
 use leptonic::prelude::*;
 use leptos::*;
-use leptos_icons::BsIcon;
+use leptos_icons::{BsIcon,TiIcon,CgIcon};
 use petgraph::algo;
 use petgraph::visit::IntoNodeReferences;
 use itertools::Itertools;
@@ -152,8 +152,15 @@ pub fn App() -> impl IntoView {
                 <Grid spacing=Size::Em(0.6)>
                     <Row>
                         <Col md=3>
+                            "From System"
+                        </Col>
+                        <Col md=3>
+                            "To System"
+                        </Col>
+                    </Row>
+                    <Row>
+                        <Col md=3>
                             <div style="width: 100%;">
-                                <div style="margin-bottom: 5px;">"From System"</div>
                                 <OptionalSelect
                                     options=systems
                                     search_text_provider=move |o : System| o.name
@@ -164,10 +171,20 @@ pub fn App() -> impl IntoView {
                                     allow_deselect=true
                                 />
                             </div>
+                            <div style="margin-left: 10px;">
+                            <Icon
+                                on:click=move |_| {
+                                    let new_to_system = from_system.get().clone();
+                                    let new_from_system = to_system.get().clone();
+                                    set_from_system.set(new_from_system);
+                                    set_to_system.set(new_to_system);
+                                }
+                                icon=CgIcon::CgSwap style="font-size: 2.5em;"
+                            />
+                            </div>
                         </Col>
                         <Col md=3>
                             <div style="width: 100%;">
-                                <div style="margin-bottom: 5px;">"To System"</div>
                                 <OptionalSelect
                                     options=systems
                                     search_text_provider=move |o : System| o.name
@@ -236,16 +253,86 @@ pub fn App() -> impl IntoView {
                         <table>
                             <thead>
                                 <tr>
+                                    <th>" "</th>
                                     <th>"System"</th>
-                                    <th>"Connection"</th>
+                                    <th>"Class"</th>
+                                    <th>"Signature"</th>
+                                    <th>"Life Status"</th>
+                                    <th>"Mass Status"</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {values.into_iter().map(|(system, connection) : (System, Connection)| {
+                                    let clicksystem = system.clone();
                                     view! {
                                         <tr>
-                                            <td>{ format!("{:?}", system) }</td>
-                                            <td>{ format!("{:?}", connection) }</td>
+                                            <td>
+                                                <Icon
+                                                    on:click=move |_| { 
+                                                        let mut new_avoid_systems : Vec<System> = avoid_systems.get().clone();
+                                                        new_avoid_systems.push(clicksystem.clone());
+                                                        set_avoid_systems.set(new_avoid_systems);
+                                                    }
+                                                    icon=TiIcon::TiDelete style="font-size: 1em;"
+                                                />
+                                            </td>
+                                            <td>{ system.name }</td>
+                                            <td>{
+                                                let name = match system.class {
+                                                    SystemClass::C1 => "C1",
+                                                    SystemClass::C2 => "C2",
+                                                    SystemClass::C3 => "C3",
+                                                    SystemClass::C4 => "C4",
+                                                    SystemClass::C5 => "C5",
+                                                    SystemClass::C6 => "C6",
+                                                    SystemClass::Highsec => "HS",
+                                                    SystemClass::Lowsec => "LS",
+                                                    SystemClass::Nullsec => "NS",
+                                                    SystemClass::Thera => "Thera",
+                                                    SystemClass::C13 => "C13",
+                                                    SystemClass::DrifterBarbican => "Drifter (Barbican)",
+                                                    SystemClass::DrifterConflux => "Drifter (Conflux)",
+                                                    SystemClass::DrifterRedoubt => "Drifter (Redoubt)",
+                                                    SystemClass::DrifterSentinel => "Drifter (Sentinel)",
+                                                    SystemClass::DrifterVidette => "Drifter (Vidette)",
+                                                    SystemClass::Pochven => "Pochven",
+                                                    SystemClass::Zarzakh => "Zarzakh",
+                                                };
+                                                match system.class {
+                                                    SystemClass::Highsec => view! { <span style="color: green;">"HS"</span> }.into_view(),
+                                                    SystemClass::Lowsec => view! { <span style="color: orange;">"LS"</span> }.into_view(),
+                                                    _ => view! { <span style="color: red;">{name}</span> }.into_view()
+                                                }
+                                            }</td>
+                                            {
+                                            match connection {
+                                                Connection::Wormhole(wormhole) => {
+                                                    view! {
+                                                        <td>{ wormhole.signature.unwrap_or("???".to_owned())[..3].to_owned() }</td>
+                                                        <td>{
+                                                            match wormhole.life {
+                                                                WormholeLife::Stable => view! { <span style="color: green;">"Stable"</span> }.into_view(),
+                                                                WormholeLife::EOL => view! { <span style="color: red;">"EOL"</span> }.into_view()
+                                                            }
+                                                        }</td>
+                                                        <td>{
+                                                            match wormhole.mass {
+                                                                WormholeMass::Stable => view! { <span style="color: green;">"Stable"</span> }.into_view(),
+                                                                WormholeMass::Destab => view! { <span style="color: orange;">"Destab"</span> }.into_view(),
+                                                                WormholeMass::VOC => view! { <span style="color: red;">"VOC"</span> }.into_view(),
+                                                            }
+                                                        }</td>
+                                                    }
+                                                },
+                                                Connection::Gate => {
+                                                    view! {
+                                                        <td>" "</td>
+                                                        <td>" "</td>
+                                                        <td>" "</td>
+                                                    }
+                                                }
+                                            }.into_view()
+                                            }
                                         </tr>
                                     }
                                 }).collect_view()}
