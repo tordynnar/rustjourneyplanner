@@ -1,6 +1,7 @@
 use serde_tuple::*;
 use serde_repr::*;
 use num_enum::TryFromPrimitive;
+use std::cmp::Ordering;
 
 #[derive(Debug, Clone, Serialize_repr, Deserialize_repr, Eq, PartialEq, TryFromPrimitive)]
 #[repr(u8)]
@@ -32,4 +33,24 @@ pub struct System {
     pub security : i8,
     pub class : Class,
     pub neighbours : Vec<u32> // Neighbours are not repeated on both sides
+}
+
+impl PartialEq for System {
+    fn eq(&self, other: &System) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for System {}
+
+impl PartialOrd for System {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.name.partial_cmp(&other.name)
+    }
+}
+
+impl Ord for System {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.name.cmp(&other.name)
+    }
 }
