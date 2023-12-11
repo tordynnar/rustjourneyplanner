@@ -54,30 +54,19 @@ pub fn App() -> impl IntoView {
         }
     });
 
-    
-    let graph_data = create_memo(move |_|  {
+    let graph = create_memo(move |_|  {
         Ok(get_graph(
             sde.get().map_or_else(|| Err(loadingerror("Loading static data")), |v| v.map_err(|e| criticalerror(e)))?,
             tripwire.get().map_or_else(|| Err(loadingerror("Loading wormhole data")), |v| v.map_err(|e| criticalerror(e)))?
         ))
     });
-    
-
-    /*
-    let graph_data = Signal::derive(move ||  {
-        Ok(get_graph(
-            sde.get().map_or_else(|| Err(loadingerror("Loading static data")), |v| v.map_err(|e| criticalerror(e)))?,
-            tripwire.get().map_or_else(|| Err(loadingerror("Loading wormhole data")), |v| v.map_err(|e| criticalerror(e)))?
-        ))
-    });
-    */
 
     let (from_system, set_from_system) = create_signal(Option::<System>::None);
     let (to_system, set_to_system) = create_signal(Option::<System>::None);
     let (avoid_systems, set_avoid_systems) = create_signal(Vec::<System>::new());
     
-    let route_data = Signal::derive(move || -> Result<Vec<(System,Connection)>,ErrorStatus> {
-        let graph = graph_data.get()?.value;
+    let route = Signal::derive(move || -> Result<Vec<(System,Connection)>,ErrorStatus> {
+        let graph = graph.get()?.value;
         let from_system_value = from_system.get().ok_or_else(|| inputerror("From system not selected"))?;
         let to_system_value = to_system.get().ok_or_else(|| inputerror("To system not selected"))?;
         let avoid_systems_value = avoid_systems.get();
@@ -176,7 +165,7 @@ pub fn App() -> impl IntoView {
                 set_selected=move |v| set_avoid_systems.set(v)
             />
 
-            {move || match route_data.get() {
+            {move || match route.get() {
                 Err(err) => match err.category {
                     ErrorCategory::Loading => view! { <Alert variant=AlertVariant::Info title=move || view! { "Loading" }.into_view() >{err.description}</Alert> }.into_view(),
                     ErrorCategory::Input => view! { <Alert variant=AlertVariant::Warn title=move || view! { "Input error" }.into_view() >{err.description}</Alert> }.into_view(),
