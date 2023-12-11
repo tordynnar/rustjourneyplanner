@@ -65,6 +65,7 @@ impl From<Option<u32>> for SystemOrClass {
     }
 }
 
+// TODO: Validate that systems are real
 pub async fn get_tripwire_data() -> Result<Vec::<TripwireWormhole>, String> {
     let mut data = Vec::<TripwireWormhole>::new();
 
