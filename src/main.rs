@@ -3,6 +3,7 @@ use leptos::*;
 use petgraph::algo;
 use petgraph::visit::IntoNodeReferences;
 use itertools::Itertools;
+use eve_sde::*;
 
 mod data_dynamic;
 mod data_static;
@@ -13,11 +14,10 @@ use data_dynamic::*;
 use data_static::*;
 use data_graph::*;
 use error::*;
-use eve_sde::*;
 
 #[component]
 pub fn App() -> impl IntoView {
-    let static_data = create_local_resource(|| (), |_| async move {
+    let static_data = create_local_resource(|| (), |_| async {
         get_static_data().await
     });
 
