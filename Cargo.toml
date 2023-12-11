@@ -1,3 +1,4 @@
+workspace = { members = ["tools/eve_sde", "tools/eve_sde_cli"] }
 [package]
 name = "rustjourneyplanner"
 version = "0.1.0"

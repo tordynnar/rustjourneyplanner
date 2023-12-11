@@ -1,0 +1,10 @@
+[package]
+name = "eve_sde"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+num_enum = "0.7.1"
+serde = { version ="1.0.193", features = ["derive"] }
+serde_repr = "0.1.17"
+serde_tuple = "0.5.0"
