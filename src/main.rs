@@ -149,18 +149,12 @@ pub fn App() -> impl IntoView {
             </AppBar>
 
             <div id="container">
+                // TODO: When you make the window size small, the headings don't make sense
                 <Grid spacing=Size::Em(0.6)>
                     <Row>
                         <Col md=3>
-                            "From System"
-                        </Col>
-                        <Col md=3>
-                            "To System"
-                        </Col>
-                    </Row>
-                    <Row>
-                        <Col md=3>
                             <div style="width: 100%;">
+                                <div style="margin-bottom: 5px;">"From System"</div>
                                 <OptionalSelect
                                     options=systems
                                     search_text_provider=move |o : System| o.name
@@ -171,20 +165,21 @@ pub fn App() -> impl IntoView {
                                     allow_deselect=true
                                 />
                             </div>
-                            <div style="margin-left: 10px;">
-                            <Icon
-                                on:click=move |_| {
-                                    let new_to_system = from_system.get().clone();
-                                    let new_from_system = to_system.get().clone();
-                                    set_from_system.set(new_from_system);
-                                    set_to_system.set(new_to_system);
-                                }
-                                icon=CgIcon::CgSwap style="font-size: 2.5em;"
-                            />
+                            <div id="swapbutton">
+                                <Icon
+                                    on:click=move |_| {
+                                        let new_to_system = from_system.get().clone();
+                                        let new_from_system = to_system.get().clone();
+                                        set_from_system.set(new_from_system);
+                                        set_to_system.set(new_to_system);
+                                    }
+                                    icon=CgIcon::CgSwap style="font-size: 2.5em;"
+                                />
                             </div>
                         </Col>
                         <Col md=3>
                             <div style="width: 100%;">
+                                <div style="margin-bottom: 5px;">"To System"</div>
                                 <OptionalSelect
                                     options=systems
                                     search_text_provider=move |o : System| o.name
@@ -273,6 +268,7 @@ pub fn App() -> impl IntoView {
                                                         new_avoid_systems.push(clicksystem.clone());
                                                         set_avoid_systems.set(new_avoid_systems);
                                                     }
+                                                    class="avoidbutton"
                                                     icon=TiIcon::TiDelete style="font-size: 1em;"
                                                 />
                                             </td>

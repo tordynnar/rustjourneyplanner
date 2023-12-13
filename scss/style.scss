@@ -49,3 +49,22 @@ body {
         margin-left: 20px;
     }
 }
+
+#swapbutton {
+    margin-left: 10px;
+    display: flex;
+    align-items: end;
+    padding-bottom: 5px;
+
+    &:hover {
+        color: red;
+        cursor: pointer;
+    }
+}
+
+.avoidbutton {
+    &:hover {
+        color: red;
+        cursor: pointer;
+    }
+}
