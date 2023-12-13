@@ -134,9 +134,14 @@ pub fn App() -> impl IntoView {
             <AppBar id="app-bar" height=Height::Em(3.5)>
                 <div id="app-bar-content">
                     <Stack id="left" orientation=StackOrientation::Horizontal spacing=Size::Zero>
-                        <H3 style="margin: 0 0 0 0.5em">
-                            "Journey Planner"
-                        </H3>
+                        <div>
+                            <H3 style="margin: 0 0 0 20px;">
+                                "Journey Planner"
+                            </H3>
+                            <H6 style="margin: 0 0 0 20px;">
+                                "by Tordynnar"
+                            </H6>
+                        </div>
                     </Stack>
                     <Stack id="right" orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
                             <LinkExt href="https://github.com/tordynnar/rustjourneyplanner" target=LinkExtTarget::Blank>
