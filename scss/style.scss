@@ -2,15 +2,9 @@
     font-family: Roboto, sans-serif;
 }
 
-html {
-    font-size: 16px;
-    height: 100%;
-}
-
 body {
+    font-size: 16px;
     margin: 0;
-    min-height: var(--leptonic-vh, 100vh);
-    height: 100%;
     display: flex;
     flex-direction: column;
 }
@@ -74,11 +68,11 @@ body {
     thead {
         th, td {
             font-weight: bold;
-            border-bottom: 1px solid #888;
+            border-bottom: 1px solid var(--table-border-color);
         }
     }
 
     tbody tr:hover td {
-        background-color: #ff4444 !important;
+        background-color: var(--table-background-color-on-hover) !important;
     }
 }

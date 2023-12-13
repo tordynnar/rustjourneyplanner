@@ -2,7 +2,7 @@
 
 use leptonic::prelude::*;
 use leptos::*;
-use leptos_icons::{BiIcon,BsIcon,AiIcon,CgIcon};
+use leptos_icons::{BsIcon,CgIcon};
 use petgraph::algo;
 use petgraph::visit::IntoNodeReferences;
 use itertools::Itertools;
@@ -148,7 +148,6 @@ pub fn App() -> impl IntoView {
             </AppBar>
 
             <div id="container">
-                // TODO: When you make the window size small, the headings don't make sense
                 <Grid spacing=Size::Em(0.6)>
                     <Row>
                         <Col md=3>
@@ -251,12 +250,12 @@ pub fn App() -> impl IntoView {
                         <table id="routetable">
                             <thead>
                                 <tr>
-                                    <th>" "</th>
                                     <th>"System"</th>
                                     <th>"Class"</th>
                                     <th>"Signature"</th>
                                     <th>"Life"</th>
                                     <th>"Mass"</th>
+                                    <th>" "</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -264,23 +263,6 @@ pub fn App() -> impl IntoView {
                                     let avoid_system_clone = system.clone();
                                     view! {
                                         <tr>
-                                            <td>
-                                                <leptonic-link>
-                                                    <a>
-                                                        <Icon
-                                                            on:click=move |_| { 
-                                                                let mut new_avoid_systems : Vec<System> = avoid_systems.get().clone();
-                                                                new_avoid_systems.push(avoid_system_clone.clone());
-                                                                set_avoid_systems.set(new_avoid_systems);
-                                                            }
-                                                            icon=AiIcon::AiDeleteOutlined style="font-size: 1em;"
-                                                        />
-                                                    </a>
-                                                </leptonic-link>
-                                                <LinkExt href={ format!("https://zkillboard.com/system/{}/", system.id) } target=LinkExtTarget::Blank>
-                                                    <Icon icon=BiIcon::BiCaretDownSquareRegular style="font-size: 1em;"/>
-                                                </LinkExt>
-                                            </td>
                                             <td>{ system.name }</td>
                                             <td>{
                                                 let name = match system.class {
@@ -338,6 +320,18 @@ pub fn App() -> impl IntoView {
                                                 }
                                             }.into_view()
                                             }
+                                            <td>
+                                                <leptonic-link>
+                                                    <a on:click=move |_| { 
+                                                        let mut new_avoid_systems : Vec<System> = avoid_systems.get().clone();
+                                                        new_avoid_systems.push(avoid_system_clone.clone());
+                                                        set_avoid_systems.set(new_avoid_systems);
+                                                    }>"Avoid"</a>
+                                                </leptonic-link>" | "
+                                                <LinkExt href={ format!("https://zkillboard.com/system/{}/", system.id) } target=LinkExtTarget::Blank>
+                                                    "zKillboard"
+                                                </LinkExt>
+                                            </td>
                                         </tr>
                                     }
                                 }).collect_view()}
