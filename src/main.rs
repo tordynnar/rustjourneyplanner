@@ -264,7 +264,7 @@ pub fn App() -> impl IntoView {
                                     view! {
                                         <tr>
                                             <td>{ system.name }</td>
-                                            <td>{
+                                            {
                                                 let name = match system.class {
                                                     SystemClass::C1 => "C1",
                                                     SystemClass::C2 => "C2",
@@ -286,11 +286,11 @@ pub fn App() -> impl IntoView {
                                                     SystemClass::Zarzakh => "Zarzakh",
                                                 };
                                                 match system.class {
-                                                    SystemClass::Highsec => view! { <span style="color: green;">"HS"</span> }.into_view(),
-                                                    SystemClass::Lowsec => view! { <span style="color: orange;">"LS"</span> }.into_view(),
-                                                    _ => view! { <span style="color: red;">{name}</span> }.into_view()
+                                                    SystemClass::Highsec => view! { <td class="highsec">"HS"</td> }.into_view(),
+                                                    SystemClass::Lowsec => view! { <td class="lowsec">"LS"</td> }.into_view(),
+                                                    _ => view! { <td class="caution">{name}</td> }.into_view()
                                                 }
-                                            }</td>
+                                            }
                                             {
                                             match connection {
                                                 Connection::Wormhole(wormhole) => {

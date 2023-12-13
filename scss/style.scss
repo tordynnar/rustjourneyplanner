@@ -69,10 +69,42 @@ body {
         th, td {
             font-weight: bold;
             border-bottom: 1px solid var(--table-border-color);
+            background-color: var(--table-header-background-color);
+        }
+    }
+
+    tbody {
+        td {
+            background-color: var(--table-background-color);
+        }
+    }
+
+    @media (max-width: 768px) {
+        td:nth-child(n+4), th:nth-child(n+4) {
+            display: none;
+            width: 0;
+            height: 0;
+            opacity: 0;
+            visibility: collapse;
         }
     }
 
     tbody tr:hover td {
-        background-color: var(--table-background-color-on-hover) !important;
+        background-color: var(--table-background-color-on-hover);
     }
+}
+
+.highsec {
+    color: var(--alert-success-color);
+    background-color: var(--alert-success-background-color) !important;
+}
+
+.lowsec {
+    color: var(--alert-warn-color);
+    background-color: var(--alert-warn-background-color) !important;
+}
+
+.caution {
+    color: var(--alert-danger-color);
+    background-color: var(--alert-danger-background-color) !important;
 }
