@@ -2,7 +2,7 @@
 
 use leptonic::prelude::*;
 use leptos::*;
-use leptos_icons::{BsIcon,TiIcon,CgIcon};
+use leptos_icons::{BiIcon,BsIcon,AiIcon,CgIcon};
 use petgraph::algo;
 use petgraph::visit::IntoNodeReferences;
 use itertools::Itertools;
@@ -138,7 +138,6 @@ pub fn App() -> impl IntoView {
                             "Journey Planner"
                         </H3>
                     </Stack>
-
                     <Stack id="right" orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
                             <LinkExt href="https://github.com/tordynnar/rustjourneyplanner" target=LinkExtTarget::Blank>
                                 <Icon id="github-icon" icon=BsIcon::BsGithub aria_label="GitHub icon"/>
@@ -166,15 +165,19 @@ pub fn App() -> impl IntoView {
                                 />
                             </div>
                             <div id="swapbutton">
-                                <Icon
-                                    on:click=move |_| {
-                                        let new_to_system = from_system.get().clone();
-                                        let new_from_system = to_system.get().clone();
-                                        set_from_system.set(new_from_system);
-                                        set_to_system.set(new_to_system);
-                                    }
-                                    icon=CgIcon::CgSwap style="font-size: 2.5em;"
-                                />
+                                <leptonic-link>
+                                    <a>
+                                        <Icon
+                                            on:click=move |_| {
+                                                let new_to_system = from_system.get().clone();
+                                                let new_from_system = to_system.get().clone();
+                                                set_from_system.set(new_from_system);
+                                                set_to_system.set(new_to_system);
+                                            }
+                                            icon=CgIcon::CgSwap style="font-size: 2.5em;"
+                                        />
+                                    </a>
+                                </leptonic-link>
                             </div>
                         </Col>
                         <Col md=3>
@@ -245,32 +248,38 @@ pub fn App() -> impl IntoView {
                         ErrorCategory::Critical => view! { <Alert variant=AlertVariant::Danger title=move || view! { "Critical Error" }.into_view() >{err.description}</Alert> }.into_view()
                     },
                     Ok(values) => view! {
-                        <table>
+                        <table id="routetable">
                             <thead>
                                 <tr>
                                     <th>" "</th>
                                     <th>"System"</th>
                                     <th>"Class"</th>
                                     <th>"Signature"</th>
-                                    <th>"Life Status"</th>
-                                    <th>"Mass Status"</th>
+                                    <th>"Life"</th>
+                                    <th>"Mass"</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {values.into_iter().map(|(system, connection) : (System, Connection)| {
-                                    let clicksystem = system.clone();
+                                    let avoid_system_clone = system.clone();
                                     view! {
                                         <tr>
                                             <td>
-                                                <Icon
-                                                    on:click=move |_| { 
-                                                        let mut new_avoid_systems : Vec<System> = avoid_systems.get().clone();
-                                                        new_avoid_systems.push(clicksystem.clone());
-                                                        set_avoid_systems.set(new_avoid_systems);
-                                                    }
-                                                    class="avoidbutton"
-                                                    icon=TiIcon::TiDelete style="font-size: 1em;"
-                                                />
+                                                <leptonic-link>
+                                                    <a>
+                                                        <Icon
+                                                            on:click=move |_| { 
+                                                                let mut new_avoid_systems : Vec<System> = avoid_systems.get().clone();
+                                                                new_avoid_systems.push(avoid_system_clone.clone());
+                                                                set_avoid_systems.set(new_avoid_systems);
+                                                            }
+                                                            icon=AiIcon::AiDeleteOutlined style="font-size: 1em;"
+                                                        />
+                                                    </a>
+                                                </leptonic-link>
+                                                <LinkExt href={ format!("https://zkillboard.com/system/{}/", system.id) } target=LinkExtTarget::Blank>
+                                                    <Icon icon=BiIcon::BiCaretDownSquareRegular style="font-size: 1em;"/>
+                                                </LinkExt>
                                             </td>
                                             <td>{ system.name }</td>
                                             <td>{

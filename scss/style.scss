@@ -55,16 +55,26 @@ body {
     display: flex;
     align-items: end;
     padding-bottom: 5px;
-
-    &:hover {
-        color: red;
-        cursor: pointer;
-    }
 }
 
-.avoidbutton {
-    &:hover {
-        color: red;
-        cursor: pointer;
+#routetable {
+    margin-top: 20px;
+    width: 100%;
+    max-width: 100%;
+    background-color: transparent;
+    border: 0;
+    border-collapse: collapse;
+
+    td, th {
+        text-align: left;
+        padding: 10px 5px;
+        vertical-align: top;
+    }
+
+    thead {
+        th, td {
+            font-weight: bold;
+            border-bottom: 1px solid #888;
+        }
     }
 }
