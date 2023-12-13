@@ -94,17 +94,17 @@ body {
     }
 }
 
-.highsec {
+td.green {
     color: var(--alert-success-color);
     background-color: var(--alert-success-background-color) !important;
 }
 
-.lowsec {
+td.orange {
     color: var(--alert-warn-color);
     background-color: var(--alert-warn-background-color) !important;
 }
 
-.caution {
+td.red {
     color: var(--alert-danger-color);
     background-color: var(--alert-danger-background-color) !important;
 }

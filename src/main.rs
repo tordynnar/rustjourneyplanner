@@ -255,7 +255,7 @@ pub fn App() -> impl IntoView {
                                     <th>"Signature"</th>
                                     <th>"Life"</th>
                                     <th>"Mass"</th>
-                                    <th>" "</th>
+                                    <th>"Actions"</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -286,9 +286,9 @@ pub fn App() -> impl IntoView {
                                                     SystemClass::Zarzakh => "Zarzakh",
                                                 };
                                                 match system.class {
-                                                    SystemClass::Highsec => view! { <td class="highsec">"HS"</td> }.into_view(),
-                                                    SystemClass::Lowsec => view! { <td class="lowsec">"LS"</td> }.into_view(),
-                                                    _ => view! { <td class="caution">{name}</td> }.into_view()
+                                                    SystemClass::Highsec => view! { <td class="green">"HS"</td> }.into_view(),
+                                                    SystemClass::Lowsec => view! { <td class="orange">"LS"</td> }.into_view(),
+                                                    _ => view! { <td class="red">{name}</td> }.into_view()
                                                 }
                                             }
                                             {
@@ -296,19 +296,19 @@ pub fn App() -> impl IntoView {
                                                 Connection::Wormhole(wormhole) => {
                                                     view! {
                                                         <td>{ wormhole.signature.unwrap_or("???".to_owned())[..3].to_owned() }</td>
-                                                        <td>{
+                                                        {
                                                             match wormhole.life {
-                                                                WormholeLife::Stable => view! { <span style="color: green;">"Stable"</span> }.into_view(),
-                                                                WormholeLife::EOL => view! { <span style="color: red;">"EOL"</span> }.into_view()
+                                                                WormholeLife::Stable => view! { <td>"Stable"</td> }.into_view(),
+                                                                WormholeLife::EOL => view! { <td class="red">"EOL"</td> }.into_view()
                                                             }
-                                                        }</td>
-                                                        <td>{
+                                                        }
+                                                        {
                                                             match wormhole.mass {
-                                                                WormholeMass::Stable => view! { <span style="color: green;">"Stable"</span> }.into_view(),
-                                                                WormholeMass::Destab => view! { <span style="color: orange;">"Destab"</span> }.into_view(),
-                                                                WormholeMass::VOC => view! { <span style="color: red;">"VOC"</span> }.into_view(),
+                                                                WormholeMass::Stable => view! { <td>"Stable"</td> }.into_view(),
+                                                                WormholeMass::Destab => view! { <td class="orange">"Destab"</td> }.into_view(),
+                                                                WormholeMass::VOC => view! { <td class="red">"VOC"</td> }.into_view(),
                                                             }
-                                                        }</td>
+                                                        }
                                                     }
                                                 },
                                                 Connection::Gate => {
