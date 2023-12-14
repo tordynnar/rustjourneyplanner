@@ -4,6 +4,7 @@
 use leptonic::prelude::*;
 use leptos::*;
 use leptos_icons::{BsIcon,CgIcon};
+use leptos_use::{use_interval, UseIntervalReturn};
 use petgraph::algo;
 use petgraph::visit::IntoNodeReferences;
 use itertools::Itertools;
@@ -14,7 +15,7 @@ use eve_sde::*;
 mod tripwire;
 mod graph;
 mod error;
-mod nevereq;
+mod helpers;
 mod attr;
 
 use tripwire::*;
@@ -50,12 +51,18 @@ fn system_search_filter((s, o) : (String, Vec<System>)) -> Vec<System> {
 
 #[component]
 pub fn App() -> impl IntoView {
+    let UseIntervalReturn { counter : tripwire_refresh, .. } = use_interval(2000);
+
     let sde = create_local_resource(|| (), |_| async {
         get_sde().await
     });
 
-    let tripwire = create_local_resource(|| (), |_| async move {
+    let tripwire = create_local_resource(move || { tripwire_refresh.get() }, |_| async move {
         get_tripwire().await
+    });
+
+    let tripwire_memo = create_memo(move |_|  {
+        tripwire.get().map_or_else(|| Err(loadingerror("Loading wormhole data")), |v| v.map_err(|e| criticalerror(e)))
     });
 
     let systems = Signal::derive(move ||  {
@@ -70,7 +77,7 @@ pub fn App() -> impl IntoView {
     let graph = create_memo(move |_|  {
         Ok(get_graph(
             sde.get().map_or_else(|| Err(loadingerror("Loading static data")), |v| v.map_err(|e| criticalerror(e)))?,
-            tripwire.get().map_or_else(|| Err(loadingerror("Loading wormhole data")), |v| v.map_err(|e| criticalerror(e)))?
+            tripwire_memo.get()?.wormholes
         ))
     });
 
