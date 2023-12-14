@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ops::Deref;
 use chrono::NaiveDateTime;
 use petgraph::graph::{Graph, NodeIndex};
 use eve_sde::System;
@@ -6,6 +7,7 @@ use tracing::{info,warn};
 
 use crate::tripwire::*;
 use crate::nevereq::*;
+use crate::attr::*;
 
 #[derive(Debug, Clone)]
 pub struct WormholeAttributes {
@@ -44,7 +46,7 @@ pub fn get_graph(sde : Vec<System>, tripwire_data : Vec::<TripwireWormhole>) -> 
     }
 
     for wormhole in tripwire_data {
-        let jump_mass = None; // TODO
+        let jump_mass = wormhole.wormhole_type.as_ref().and_then(|t| WORMHOLE_ATTR.deref().get(t).copied());
 
         let to_system = match wormhole.to_system {
             SystemOrClass::SpecificSystem(v) => v,

@@ -1,4 +1,5 @@
 #![feature(array_try_map)]
+#![feature(lazy_cell)]
 
 use leptonic::prelude::*;
 use leptos::*;
@@ -14,6 +15,7 @@ mod tripwire;
 mod graph;
 mod error;
 mod nevereq;
+mod attr;
 
 use tripwire::*;
 use graph::*;
@@ -75,6 +77,7 @@ pub fn App() -> impl IntoView {
     let (from_system, set_from_system) = create_signal(Option::<System>::None);
     let (to_system, set_to_system) = create_signal(Option::<System>::None);
     let (avoid_systems, set_avoid_systems) = create_signal(Vec::<System>::new());
+    let (ship_size, set_ship_size) = create_signal((19u32, "Medium (up to Battlecruiser)".to_owned()));
     let (exclude_lowsec, set_exclude_lowsec) = create_signal(false);
     let (exclude_nullsec, set_exclude_nullsec) = create_signal(false);
     let (exclude_voc, set_exclude_voc) = create_signal(false);
@@ -85,6 +88,7 @@ pub fn App() -> impl IntoView {
         let from_system_value = from_system.get().ok_or_else(|| inputerror("From system not selected"))?;
         let to_system_value = to_system.get().ok_or_else(|| inputerror("To system not selected"))?;
         let avoid_systems_value = avoid_systems.get();
+        let (ship_size_value, _) = ship_size.get();
         let exclude_lowsec_value = exclude_lowsec.get();
         let exclude_nullsec_value = exclude_nullsec.get();
         let exclude_voc_value = exclude_voc.get();
@@ -99,6 +103,9 @@ pub fn App() -> impl IntoView {
             if let Connection::Wormhole(wormhole) = connection {
                 if exclude_voc_value && wormhole.mass == WormholeMass::VOC { return None }
                 if exclude_eol_value && wormhole.life == WormholeLife::EOL { return None }
+                if let Some(jump_mass) = wormhole.jump_mass {
+                    if ship_size_value > jump_mass { return None }
+                }
             }
             Some(connection.clone())
         });
@@ -155,7 +162,7 @@ pub fn App() -> impl IntoView {
             <div id="container">
                 <Grid spacing=Size::Em(0.6)>
                     <Row>
-                        <Col md=3>
+                        <Col md=6>
                             <div style="width: 100%;">
                                 <div style="margin-bottom: 5px;">"From System"</div>
                                 <OptionalSelect
@@ -184,7 +191,7 @@ pub fn App() -> impl IntoView {
                                 </leptonic-link>
                             </div>
                         </Col>
-                        <Col md=3>
+                        <Col md=6>
                             <div style="width: 100%;">
                                 <div style="margin-bottom: 5px;">"To System"</div>
                                 <OptionalSelect
@@ -210,6 +217,25 @@ pub fn App() -> impl IntoView {
                                     render_option=move |o : System| format!("{}", o.name)
                                     selected=move || avoid_systems.get()
                                     set_selected=move |v| set_avoid_systems.set(v)
+                                />
+                            </div>
+                        </Col>
+                    </Row>
+                    <Row>
+                        <Col md=12>
+                            <div style="width: 100%;">
+                                <div style="margin-bottom: 5px;">"Ship Size"</div>
+                                <Select
+                                    options=vec![
+                                        (1u32, "Small (up to Destroyer)".to_owned()),
+                                        (19u32, "Medium (up to Battlecruiser)".to_owned()),
+                                        (220u32, "Large (up to Battleship)".to_owned()),
+                                        (1000u32, "Very Large (larger than Battleship".to_owned()),
+                                    ]
+                                    search_text_provider=move |(_, desc) : (u32, String)| desc
+                                    render_option=move |(_, desc) : (u32, String)| desc
+                                    selected=move || ship_size.get()
+                                    set_selected=move |v| set_ship_size.set(v)
                                 />
                             </div>
                         </Col>
@@ -260,6 +286,7 @@ pub fn App() -> impl IntoView {
                                     <th>"Signature"</th>
                                     <th>"Life"</th>
                                     <th>"Mass"</th>
+                                    <th>"Jump Mass"</th>
                                     <th>"Actions"</th>
                                 </tr>
                             </thead>
@@ -314,10 +341,17 @@ pub fn App() -> impl IntoView {
                                                                 WormholeMass::VOC => view! { <td class="red">"VOC"</td> }.into_view(),
                                                             }
                                                         }
+                                                        {
+                                                            match wormhole.jump_mass {
+                                                                None => view! { <td>"???"</td> }.into_view(),
+                                                                Some(v) => view! { <td>{ format!("{}", v) }</td> }.into_view(),
+                                                            }
+                                                        }
                                                     }
                                                 },
                                                 Connection::Gate => {
                                                     view! {
+                                                        <td>" "</td>
                                                         <td>" "</td>
                                                         <td>" "</td>
                                                         <td>" "</td>
