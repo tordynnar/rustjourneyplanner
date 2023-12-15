@@ -75,7 +75,7 @@ pub fn App() -> impl IntoView {
         get_sde().await
     });
 
-    let tripwire = create_local_resource_timed(2000, move || async move {
+    let tripwire = create_local_resource_timed(5000, move || async move {
         get_tripwire_memoable().await
     });
 
