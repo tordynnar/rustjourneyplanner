@@ -205,7 +205,7 @@ pub fn App() -> impl IntoView {
             };
         }
 
-        format!("> {}", result.join(" > "))
+        format!("> {}   ({} jumps)", result.join(" > "), route.len())
     });
 
     view! {
