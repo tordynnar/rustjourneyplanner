@@ -80,7 +80,7 @@ pub fn App() -> impl IntoView {
     });
 
     let tripwire_memo = create_memo(move |_|  {
-        tripwire.get().map_or_else(|| Err(loadingerror("Loading wormhole data")), |v| v.map_err(|e| criticalerror(e)))
+        tripwire.get().map_or_else(|| Err(loadingerror("Loading Tripwire data")), |v| v.map_err(|e| criticalerror(e)))
     });
 
     let tripwire_tracker = Signal::derive(move ||  {

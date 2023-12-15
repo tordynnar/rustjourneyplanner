@@ -25,7 +25,6 @@ pub struct TripwireWormhole {
     pub from_signature : Option<String>,
     pub to_signature : Option<String>,
     pub wormhole_type : Option<String>,
-    pub modified : NaiveDateTime,
     pub lifetime : NaiveDateTime,
     pub life : WormholeLife,
     pub mass : WormholeMass
@@ -136,16 +135,8 @@ pub async fn get_tripwire(signature_count : usize, signature_time : NaiveDateTim
 
         let wormhole_type = wormhole["type"].as_str().and_then(|v| match v { "????" => None, "" => None, _ => Some(v.to_owned()) });
 
-        let modified_str_1 = json["signatures"][initial_id]["modifiedTime"].as_str().ok_or_else(|| format!("modifiedTime missing from wormhole {}", wormhole_id))?;
-        let modified_1 = NaiveDateTime::parse_from_str(modified_str_1, "%Y-%m-%d %H:%M:%S").map_err(|_| format!("modifiedTime wrong datetime format for wormhole {}", wormhole_id))?;
-
-        let modified_str_2 = json["signatures"][secondary_id]["modifiedTime"].as_str().ok_or_else(|| format!("modifiedTime missing from wormhole {}", wormhole_id))?;
-        let modified_2 = NaiveDateTime::parse_from_str(modified_str_2, "%Y-%m-%d %H:%M:%S").map_err(|_| format!("modifiedTime wrong datetime format for wormhole {}", wormhole_id))?;
-
-        let modified = [modified_1, modified_2].into_iter().max().unwrap(); // There will always be a max with two items
-
-        let lifetime_str = json["signatures"][initial_id]["lifeTime"].as_str().ok_or_else(|| format!("lifeTime missing from wormhole {}", wormhole_id))?;
-        let lifetime = NaiveDateTime::parse_from_str(lifetime_str, "%Y-%m-%d %H:%M:%S").map_err(|_| format!("lifeTime wrong datetime format for wormhole {}", wormhole_id))?;
+        let lifetime_str = json["signatures"][initial_id]["lifeTime"].as_str().ok_or_else(|| format!("Tripwire wormhole lifeTime missing from {}", wormhole_id))?;
+        let lifetime = NaiveDateTime::parse_from_str(lifetime_str, "%Y-%m-%d %H:%M:%S").map_err(|_| format!("Tripwire wormhole lifeTime wrong datetime format for {}", wormhole_id))?;
         let age = Utc::now().naive_utc() - lifetime;
 
         let life = match wormhole["life"].as_str() {
@@ -157,16 +148,16 @@ pub async fn get_tripwire(signature_count : usize, signature_time : NaiveDateTim
                 }
             },
             Some("critical") => Ok(WormholeLife::EOL),
-            Some(_) => Err(format!("life is not stable or critical for wormhole {}", wormhole_id)),
-            None => Err(format!("life missing from wormhole {}", wormhole_id))
+            Some(_) => Err(format!("Tripwire wormhole life is not stable or critical for {}", wormhole_id)),
+            None => Err(format!("Tripwire wormhole life missing from {}", wormhole_id))
         }?;
 
         let mass = match wormhole["mass"].as_str() {
             Some("stable") => Ok(WormholeMass::Stable),
             Some("destab") => Ok(WormholeMass::Destab),
             Some("critical") => Ok(WormholeMass::VOC),
-            Some(_) => Err(format!("mass is not stable, destab or critical for wormhole {}", wormhole_id)),
-            None => Err(format!("mass is missing from wormhole {}", wormhole_id))
+            Some(_) => Err(format!("Tripwire wormhole mass is not stable, destab or critical for {}", wormhole_id)),
+            None => Err(format!("Tripwire wormhole mass is missing from {}", wormhole_id))
         }?;
 
         // Wormholes older than 24 hours probably don't exist any more
@@ -178,7 +169,7 @@ pub async fn get_tripwire(signature_count : usize, signature_time : NaiveDateTim
         // Don't want gates, already have then in the static data
         if wormhole_type == Some("GATE".to_owned()) || from_signature == Some("GAT".to_owned()) || to_signature == Some("GAT".to_owned()) { continue }
 
-        data.push(TripwireWormhole { from_system, to_system, from_signature, to_signature, wormhole_type, modified, lifetime, life, mass });
+        data.push(TripwireWormhole { from_system, to_system, from_signature, to_signature, wormhole_type, lifetime, life, mass });
     }
 
     Ok(Some(TripwireRefresh {wormholes : data, signature_count, signature_time, update_time : Utc::now().naive_utc(), update_error : None }))
@@ -191,7 +182,7 @@ pub async fn get_tripwire_memoable() -> Result<TripwireRefresh, String> {
     let result = match get_tripwire(last_result.as_ref().map(|v| v.signature_count).unwrap_or(0), last_result.as_ref().map(|v| v.signature_time).unwrap_or(NaiveDateTime::MIN)).await {
         Ok(Some(v)) => v,
         Ok(None) => {
-            let last_result_value = last_result.as_ref().ok_or_else(|| format!("Signatures not present in refresh.php"))?;
+            let last_result_value = last_result.as_ref().ok_or_else(|| format!("Tripwire signatures not present in initial refresh"))?;
             TripwireRefresh { wormholes : vec![], signature_count : last_result_value.signature_count, signature_time: last_result_value.signature_time, update_time : Utc::now().naive_utc(), update_error : None }
         }
         Err(e) => {
