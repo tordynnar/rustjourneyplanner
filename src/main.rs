@@ -195,9 +195,9 @@ pub fn App() -> impl IntoView {
                                 let tracker = tripwire_tracker.get();
                                 match (tracker.update_since, tracker.update_error) {
                                     (None, None) => view! { <div>"Loading..."</div> }.into_view(),
-                                    (Some(since), Some(e)) => view! { <div class="redfg">{ format!("{}, Update: {}", e, hhmmss(since)) }</div> }.into_view(),
+                                    (Some(since), Some(e)) => view! { <div class="redfg">{ format!("{}, Tripwire Update: {}", e, hhmmss(since)) }</div> }.into_view(),
                                     (None, Some(e)) =>  view! { <div class="redfg">{ format!("{}", e) }</div> }.into_view(),
-                                    (Some(since), None) =>  view! { <div>{ format!("Update: {}", hhmmss(since)) }</div> }.into_view(),
+                                    (Some(since), None) =>  view! { <div>{ format!("Tripwire Update: {}", hhmmss(since)) }</div> }.into_view(),
                                 }
                             }}
                         </div>
