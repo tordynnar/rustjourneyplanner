@@ -175,6 +175,39 @@ pub fn App() -> impl IntoView {
         Ok(path_details)
     });
 
+    let route_pastable = Signal::derive(move || -> String {
+        let route = match route.get() {
+            Ok(v) => v,
+            Err(_) => return String::new()
+        };
+
+        let mut result = Vec::<String>::new();
+        let mut previous_system : Option<System> = None;
+        let mut previous_connection : Option<Connection> = None;
+        for (system, connection) in &route {
+            if let Connection::Wormhole(w) = connection {
+                if let Some(s) = previous_system {
+                    match previous_connection {
+                        Some(Connection::Gate) => result.push(s.name.clone()),
+                        _ => ()
+                    };
+                }
+                result.push(w.signature.as_deref().unwrap_or("???")[..3].to_owned());
+            }
+            previous_system = Some(system.clone());
+            previous_connection = Some(connection.clone());
+        }
+
+        if let Some(s) = previous_system {
+            match previous_connection {
+                Some(Connection::Gate) => result.push(s.name.clone()),
+                _ => ()
+            };
+        }
+
+        format!("> {}", result.join(" > "))
+    });
+
     view! {
         <Root default_theme=LeptonicTheme::default()>
             <AppBar id="app-bar" height=Height::Em(3.5)>
@@ -291,13 +324,13 @@ pub fn App() -> impl IntoView {
                         </Col>
                     </Row>
                     <Row>
-                        <Col md=3>
+                        <Col md=6>
                             <div class="toggle">
                                 <Toggle state=exclude_lowsec set_state=set_exclude_lowsec/>
                                 <label>"Exclude Lowsec"</label>
                             </div>
                         </Col>
-                        <Col md=3>
+                        <Col md=6>
                             <div class="toggle">
                                 <Toggle state=exclude_voc set_state=set_exclude_voc/>
                                 <label>"Exclude VOC"</label>
@@ -305,16 +338,24 @@ pub fn App() -> impl IntoView {
                         </Col>
                     </Row>
                     <Row>
-                        <Col md=3>
+                        <Col md=6>
                             <div class="toggle">
                                 <Toggle state=exclude_nullsec set_state=set_exclude_nullsec/>
                                 <label>"Exclude Nullsec"</label>
                             </div>
                         </Col>
-                        <Col md=3>
+                        <Col md=6>
                             <div class="toggle">
                                 <Toggle state=exclude_eol set_state=set_exclude_eol/>
                                 <label>"Exclude EOL"</label>
+                            </div>
+                        </Col>
+                    </Row>
+                    <Row>
+                        <Col md=12>
+                            <div style="width: 100%;">
+                                <div style="margin-bottom: 5px;">"Pastable Route"</div>
+                                <TextInput get=route_pastable style="width: 100%;"/>
                             </div>
                         </Col>
                     </Row>
