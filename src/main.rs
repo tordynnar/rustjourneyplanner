@@ -10,6 +10,7 @@ use petgraph::visit::IntoNodeReferences;
 use itertools::Itertools;
 use tracing::info;
 use web_sys;
+use chrono::{Utc, Duration};
 use eve_sde::*;
 
 mod tripwire;
@@ -21,6 +22,15 @@ mod attr;
 use tripwire::*;
 use graph::*;
 use error::*;
+
+pub fn hhmmss(d : Duration) -> String {
+    let ss = d.num_seconds();
+    let neg = ss < 0;
+    let s = ss.abs() as u64;
+    let (h, s) = (s / 3600, s % 3600);
+    let (m, s) = (s / 60, s % 60);
+    format!("{}{:02}:{:02}:{:02}", if neg { "-" } else { "" }, h, m, s)
+}
 
 pub async fn get_sde() -> Result<Vec<System>, String> {
     info!("Downloading SDE data");
@@ -49,9 +59,16 @@ fn system_search_filter((s, o) : (String, Vec<System>)) -> Vec<System> {
         .collect::<Vec<System>>()
 }
 
+#[derive(Debug, Clone)]
+struct TripwireTracker {
+    update_since : Option<Duration>,
+    update_error : Option<String>
+}
+
 #[component]
 pub fn App() -> impl IntoView {
     let UseIntervalReturn { counter : tripwire_refresh, .. } = use_interval(2000);
+    let UseIntervalReturn { counter : tripwire_tracker_counter, .. } = use_interval(500);
 
     let sde = create_local_resource(|| (), |_| async {
         get_sde().await
@@ -63,6 +80,20 @@ pub fn App() -> impl IntoView {
 
     let tripwire_memo = create_memo(move |_|  {
         tripwire.get().map_or_else(|| Err(loadingerror("Loading wormhole data")), |v| v.map_err(|e| criticalerror(e)))
+    });
+
+    let tripwire_tracker = Signal::derive(move ||  {
+        let _ = tripwire_tracker_counter.get();
+        match tripwire.get() {
+            Some(v) => match v {
+                Ok(vv) => {
+                    let update_since = Utc::now().naive_utc() - vv.update_time;
+                    TripwireTracker { update_since : Some(update_since), update_error: vv.update_error}
+                },
+                Err(e) => TripwireTracker { update_since : None, update_error: Some(e)}
+            },
+            None => TripwireTracker { update_since: None, update_error: None }
+        }
     });
 
     let systems = Signal::derive(move ||  {
@@ -147,7 +178,7 @@ pub fn App() -> impl IntoView {
         <Root default_theme=LeptonicTheme::default()>
             <AppBar id="app-bar" height=Height::Em(3.5)>
                 <div id="app-bar-content">
-                    <Stack id="left" orientation=StackOrientation::Horizontal spacing=Size::Zero>
+                    <Stack orientation=StackOrientation::Horizontal spacing=Size::Zero>
                         <div>
                             <H3 style="margin: 0 0 0 20px;">
                                 "Journey Planner"
@@ -157,11 +188,22 @@ pub fn App() -> impl IntoView {
                             </H6>
                         </div>
                     </Stack>
-                    <Stack id="right" orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
-                            <LinkExt href="https://github.com/tordynnar/rustjourneyplanner" target=LinkExtTarget::Blank>
-                                <Icon id="github-icon" icon=BsIcon::BsGithub aria_label="GitHub icon"/>
-                            </LinkExt>
-                            <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark style="margin-right: 1em"/>
+                    <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
+                        <div>
+                            {move || {
+                                let tracker = tripwire_tracker.get();
+                                match (tracker.update_since, tracker.update_error) {
+                                    (None, None) => view! { <div>"Loading..."</div> }.into_view(),
+                                    (Some(since), Some(e)) => view! { <div class="redfg">{ format!("{}, Update: {}", e, hhmmss(since)) }</div> }.into_view(),
+                                    (None, Some(e)) =>  view! { <div class="redfg">{ format!("{}", e) }</div> }.into_view(),
+                                    (Some(since), None) =>  view! { <div>{ format!("Update: {}", hhmmss(since)) }</div> }.into_view(),
+                                }
+                            }}
+                        </div>
+                        <LinkExt href="https://github.com/tordynnar/rustjourneyplanner" target=LinkExtTarget::Blank>
+                            <Icon id="github-icon" icon=BsIcon::BsGithub aria_label="GitHub icon"/>
+                        </LinkExt>
+                        <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark style="margin-right: 1em"/>
                     </Stack>
                 </div>
             </AppBar>

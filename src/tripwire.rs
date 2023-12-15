@@ -196,7 +196,7 @@ pub async fn get_tripwire_memoable() -> Result<TripwireRefresh, String> {
         }
         Err(e) => {
             let last_result_value = last_result.as_ref().ok_or_else(|| e.clone())?;
-            TripwireRefresh { wormholes : vec![], signature_count : last_result_value.signature_count, signature_time: last_result_value.signature_time, update_time : Utc::now().naive_utc(), update_error : Some(e) }
+            TripwireRefresh { wormholes : vec![], signature_count : last_result_value.signature_count, signature_time: last_result_value.signature_time, update_time : last_result_value.update_time, update_error : Some(e) }
         }
     };
 
