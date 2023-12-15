@@ -83,10 +83,7 @@ impl PartialEq for TripwireRefresh {
     }
 }
 
-pub async fn get_tripwire() -> Result<TripwireRefresh, String> {
-    static LAST_RESULT: LazyLock<Mutex<Option<TripwireRefresh>>> = LazyLock::new(|| Mutex::new(None));
-    let mut last_result = LAST_RESULT.lock().unwrap();
-
+pub async fn get_tripwire(signature_count : usize, signature_time : NaiveDateTime) -> Result<Option<TripwireRefresh>, String> {
     let mut data = Vec::<TripwireWormhole>::new();
 
     let baseurl = web_sys::window().ok_or_else(|| format!("Cannot get base URL"))?.origin();
@@ -97,8 +94,8 @@ pub async fn get_tripwire() -> Result<TripwireRefresh, String> {
             ("mode", "refresh".to_owned()),
             ("systemID", "30000142".to_owned()),
             ("systemName", "Jita".to_owned()),
-            ("signatureCount", last_result.as_ref().map(|v| v.signature_count).unwrap_or(0).to_string()),
-            ("signatureTime", last_result.as_ref().map(|v| v.signature_time.format("%Y-%m-%d %H:%M:%S").to_string()).unwrap_or("1980-01-01 00:00:00".to_owned())),
+            ("signatureCount", signature_count.to_string()),
+            ("signatureTime", signature_time.format("%Y-%m-%d %H:%M:%S").to_string()),
         ]))
         .send().await.map_err(|_| format!("Failed to POST refresh.php"))?
         .error_for_status().map_err(|_| format!("Bad status code getting refresh.php"))?
@@ -109,9 +106,7 @@ pub async fn get_tripwire() -> Result<TripwireRefresh, String> {
 
     let signatures = match json["signatures"].as_object() {
         Some(s) => s,
-        None => {
-            return last_result.clone().ok_or_else(|| format!("Signatures not present in refresh.php"));
-        }
+        None => return Ok(None)
     };
 
     let signature_time = signatures
@@ -186,9 +181,25 @@ pub async fn get_tripwire() -> Result<TripwireRefresh, String> {
         data.push(TripwireWormhole { from_system, to_system, from_signature, to_signature, wormhole_type, modified, lifetime, life, mass });
     }
 
-    let update_time = Utc::now().naive_utc();
-    let update_error = None;
+    Ok(Some(TripwireRefresh {wormholes : data, signature_count, signature_time, update_time : Utc::now().naive_utc(), update_error : None }))
+}
 
-    *last_result = Some(TripwireRefresh {wormholes : vec![], signature_count, signature_time, update_time, update_error : update_error.clone()});
-    Ok(TripwireRefresh {wormholes : data, signature_count, signature_time, update_time, update_error : update_error.clone() })
+pub async fn get_tripwire_memoable() -> Result<TripwireRefresh, String> {
+    static LAST_RESULT: LazyLock<Mutex<Option<TripwireRefresh>>> = LazyLock::new(|| Mutex::new(None));
+    let mut last_result = LAST_RESULT.lock().unwrap();
+
+    let result = match get_tripwire(last_result.as_ref().map(|v| v.signature_count).unwrap_or(0), last_result.as_ref().map(|v| v.signature_time).unwrap_or(NaiveDateTime::MIN)).await {
+        Ok(Some(v)) => v,
+        Ok(None) => {
+            let last_result_value = last_result.as_ref().ok_or_else(|| format!("Signatures not present in refresh.php"))?;
+            TripwireRefresh { wormholes : vec![], signature_count : last_result_value.signature_count, signature_time: last_result_value.signature_time, update_time : Utc::now().naive_utc(), update_error : None }
+        }
+        Err(e) => {
+            let last_result_value = last_result.as_ref().ok_or_else(|| e.clone())?;
+            TripwireRefresh { wormholes : vec![], signature_count : last_result_value.signature_count, signature_time: last_result_value.signature_time, update_time : Utc::now().naive_utc(), update_error : Some(e) }
+        }
+    };
+
+    *last_result = Some(result.clone());
+    Ok(result)
 }

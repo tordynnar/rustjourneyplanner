@@ -58,7 +58,7 @@ pub fn App() -> impl IntoView {
     });
 
     let tripwire = create_local_resource(move || { tripwire_refresh.get() }, |_| async move {
-        get_tripwire().await
+        get_tripwire_memoable().await
     });
 
     let tripwire_memo = create_memo(move |_|  {
