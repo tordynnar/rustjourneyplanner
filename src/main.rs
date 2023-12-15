@@ -18,10 +18,12 @@ mod graph;
 mod error;
 mod helpers;
 mod attr;
+mod signals;
 
 use tripwire::*;
 use graph::*;
 use error::*;
+use signals::*;
 
 pub fn hhmmss(d : Duration) -> String {
     let ss = d.num_seconds();
@@ -67,14 +69,13 @@ struct TripwireTracker {
 
 #[component]
 pub fn App() -> impl IntoView {
-    let UseIntervalReturn { counter : tripwire_refresh, .. } = use_interval(2000);
     let UseIntervalReturn { counter : tripwire_tracker_counter, .. } = use_interval(500);
 
     let sde = create_local_resource(|| (), |_| async {
         get_sde().await
     });
 
-    let tripwire = create_local_resource(move || { tripwire_refresh.get() }, |_| async move {
+    let tripwire = create_local_resource_timed(2000, move || async move {
         get_tripwire_memoable().await
     });
 

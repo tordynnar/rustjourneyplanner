@@ -186,7 +186,7 @@ pub async fn get_tripwire(signature_count : usize, signature_time : NaiveDateTim
 
 pub async fn get_tripwire_memoable() -> Result<TripwireRefresh, String> {
     static LAST_RESULT: LazyLock<Mutex<Option<TripwireRefresh>>> = LazyLock::new(|| Mutex::new(None));
-    let mut last_result = LAST_RESULT.lock().unwrap();
+    let mut last_result = LAST_RESULT.lock().map_err(|_| format!("Failed to acquire mutex"))?;
 
     let result = match get_tripwire(last_result.as_ref().map(|v| v.signature_count).unwrap_or(0), last_result.as_ref().map(|v| v.signature_time).unwrap_or(NaiveDateTime::MIN)).await {
         Ok(Some(v)) => v,
@@ -200,6 +200,6 @@ pub async fn get_tripwire_memoable() -> Result<TripwireRefresh, String> {
         }
     };
 
-    *last_result = Some(result.clone());
+    *last_result = Some(TripwireRefresh { wormholes : vec![], signature_count : result.signature_count, signature_time: result.signature_time, update_time : result.update_time, update_error : result.update_error.clone() });
     Ok(result)
 }
