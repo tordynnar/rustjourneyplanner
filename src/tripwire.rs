@@ -79,7 +79,7 @@ pub struct TripwireRefresh {
 
 impl PartialEq for TripwireRefresh {
     fn eq(&self, other: &TripwireRefresh) -> bool {
-        self.signature_time.eq(&other.signature_time)
+        self.signature_time.eq(&other.signature_time) && self.signature_count.eq(&other.signature_count)
     }
 }
 
@@ -97,12 +97,12 @@ pub async fn get_tripwire(signature_count : usize, signature_time : NaiveDateTim
             ("signatureCount", signature_count.to_string()),
             ("signatureTime", signature_time.format("%Y-%m-%d %H:%M:%S").to_string()),
         ]))
-        .send().await.map_err(|_| format!("Failed to POST refresh.php"))?
-        .error_for_status().map_err(|_| format!("Bad status code getting refresh.php"))?
-        .bytes().await.map_err(|_| format!("Failed to get bytes for refresh.php"))?;
+        .send().await.map_err(|_| format!("Tripwire HTTP request failed"))?
+        .error_for_status().map_err(|_| format!("Tripwire HTTP request failed"))?
+        .bytes().await.map_err(|_| format!("Tripwire HTTP request failed"))?;
 
     let json : serde_json::Value = serde_json::from_slice(&result)
-        .map_err(|_| format!("Failed to parse combine.js JSON"))?;
+        .map_err(|_| format!("Tripwire JSON parse failed"))?;
 
     let signatures = match json["signatures"].as_object() {
         Some(s) => s,
@@ -118,11 +118,11 @@ pub async fn get_tripwire(signature_count : usize, signature_time : NaiveDateTim
 
     info!("Signature update: {:?}", signature_time);
 
-    let wormholes = json["wormholes"].as_object().ok_or_else(|| format!("Wormholes not present in refresh.php"))?;
+    let wormholes = json["wormholes"].as_object().ok_or_else(|| format!("Tripwire wormholes not present"))?;
 
     for (wormhole_id, wormhole) in wormholes {
-        let initial_id = wormhole["initialID"].as_str().ok_or_else(|| format!("initialID missing from wormhole {}", wormhole_id))?;
-        let secondary_id = wormhole["secondaryID"].as_str().ok_or_else(|| format!("secondaryID missing from wormhole {}", wormhole_id))?;
+        let initial_id = wormhole["initialID"].as_str().ok_or_else(|| format!("Tripwire initialID missing from wormhole {}", wormhole_id))?;
+        let secondary_id = wormhole["secondaryID"].as_str().ok_or_else(|| format!("Tripwire secondaryID missing from wormhole {}", wormhole_id))?;
 
         let from_system = match json["signatures"][initial_id]["systemID"].as_str().and_then(|v| v.parse::<u32>().ok()) {
             Some(v) => v,
