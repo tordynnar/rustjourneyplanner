@@ -73,6 +73,8 @@ pub struct TripwireRefresh {
     pub wormholes : Vec::<TripwireWormhole>,
     pub signature_count : usize,
     pub signature_time : NaiveDateTime,
+    pub update_time : NaiveDateTime,
+    pub update_error : Option<String>
 }
 
 impl PartialEq for TripwireRefresh {
@@ -89,16 +91,14 @@ pub async fn get_tripwire() -> Result<TripwireRefresh, String> {
 
     let baseurl = web_sys::window().ok_or_else(|| format!("Cannot get base URL"))?.origin();
 
-    let defaultrefresh = TripwireRefresh { wormholes : vec![], signature_count : 0, signature_time : NaiveDateTime::MIN };
-
     let client = reqwest::Client::new();
     let result = client.post(format!("{baseurl}/refresh.php"))
         .form(&HashMap::from([
             ("mode", "refresh".to_owned()),
             ("systemID", "30000142".to_owned()),
             ("systemName", "Jita".to_owned()),
-            ("signatureCount", format!("{}", last_result.as_ref().unwrap_or(&defaultrefresh).signature_count)),
-            ("signatureTime", last_result.as_ref().unwrap_or(&defaultrefresh).signature_time.format("%Y-%m-%d %H:%M:%S").to_string()),
+            ("signatureCount", last_result.as_ref().map(|v| v.signature_count).unwrap_or(0).to_string()),
+            ("signatureTime", last_result.as_ref().map(|v| v.signature_time.format("%Y-%m-%d %H:%M:%S").to_string()).unwrap_or("1980-01-01 00:00:00".to_owned())),
         ]))
         .send().await.map_err(|_| format!("Failed to POST refresh.php"))?
         .error_for_status().map_err(|_| format!("Bad status code getting refresh.php"))?
@@ -186,6 +186,9 @@ pub async fn get_tripwire() -> Result<TripwireRefresh, String> {
         data.push(TripwireWormhole { from_system, to_system, from_signature, to_signature, wormhole_type, modified, lifetime, life, mass });
     }
 
-    *last_result = Some(TripwireRefresh {wormholes : vec![], signature_count, signature_time });
-    Ok(TripwireRefresh {wormholes : data, signature_count, signature_time })
+    let update_time = Utc::now().naive_utc();
+    let update_error = None;
+
+    *last_result = Some(TripwireRefresh {wormholes : vec![], signature_count, signature_time, update_time, update_error : update_error.clone()});
+    Ok(TripwireRefresh {wormholes : data, signature_count, signature_time, update_time, update_error : update_error.clone() })
 }
