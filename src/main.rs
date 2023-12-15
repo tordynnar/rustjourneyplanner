@@ -124,37 +124,37 @@ pub fn App() -> impl IntoView {
     
     let route = Signal::derive(move || -> Result<Vec<(System,Connection)>,ErrorStatus> {
         let graph = graph.get()?.value;
-        let from_system_value = from_system.get().ok_or_else(|| inputerror("From system not selected"))?;
-        let to_system_value = to_system.get().ok_or_else(|| inputerror("To system not selected"))?;
-        let avoid_systems_value = avoid_systems.get();
-        let (ship_size_value, _) = ship_size.get();
-        let exclude_lowsec_value = exclude_lowsec.get();
-        let exclude_nullsec_value = exclude_nullsec.get();
-        let exclude_voc_value = exclude_voc.get();
-        let exclude_eol_value = exclude_eol.get();
+        let from_system = from_system.get().ok_or_else(|| inputerror("From system not selected"))?;
+        let to_system = to_system.get().ok_or_else(|| inputerror("To system not selected"))?;
+        let avoid_systems = avoid_systems.get();
+        let (ship_size, _) = ship_size.get();
+        let exclude_lowsec = exclude_lowsec.get();
+        let exclude_nullsec = exclude_nullsec.get();
+        let exclude_voc = exclude_voc.get();
+        let exclude_eol = exclude_eol.get();
 
         let filtered_graph = graph.filter_map(|_, system| {
-            if avoid_systems_value.contains(system) { return None }
-            if exclude_lowsec_value && system.class == SystemClass::Lowsec { return None }
-            if exclude_nullsec_value && system.class == SystemClass::Nullsec { return None }
+            if avoid_systems.contains(system) { return None }
+            if exclude_lowsec && system.class == SystemClass::Lowsec { return None }
+            if exclude_nullsec && system.class == SystemClass::Nullsec { return None }
             Some(system.clone())
         }, |_, connection| {
             if let Connection::Wormhole(wormhole) = connection {
-                if exclude_voc_value && wormhole.mass == WormholeMass::VOC { return None }
-                if exclude_eol_value && wormhole.life == WormholeLife::EOL { return None }
+                if exclude_voc && wormhole.mass == WormholeMass::VOC { return None }
+                if exclude_eol && wormhole.life == WormholeLife::EOL { return None }
                 if let Some(jump_mass) = wormhole.jump_mass {
-                    if ship_size_value > jump_mass { return None }
+                    if ship_size > jump_mass { return None }
                 }
             }
             Some(connection.clone())
         });
 
         let (from_system_node, _) = filtered_graph.node_references().find(|(_, system)| {
-            system.id == from_system_value.id
+            system.id == from_system.id
         }).ok_or_else(|| routingerror("From system not in graph. It was probably removed by the filtering rules."))?;
 
         let (to_system_node, _) = filtered_graph.node_references().find(|(_, system)| {
-            system.id == to_system_value.id
+            system.id == to_system.id
         }).ok_or_else(|| routingerror("To system not in graph. It was probably removed by the filtering rules."))?;
 
         info!("Calculating shortest path");
