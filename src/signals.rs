@@ -12,7 +12,7 @@ where
     let (refresh, set_refresh) = create_signal(0u64);
     let previous_result = store_value::<Option<T>>(None);
 
-    create_local_resource(move || { refresh.get() }, move |_| async move {
+    create_local_resource(move || { refresh.get() }, async move |_| {
         // This closure is not reentrant. store_value::get_value/set_value
         // call borrow/borrow_mut instead of try_borrow/try_borrow_mut on
         // a RefCell, which means it will panic when called in parallel.

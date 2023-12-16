@@ -1,5 +1,6 @@
 #![feature(array_try_map)]
 #![feature(lazy_cell)]
+#![feature(async_closure)]
 
 use leptonic::prelude::*;
 use leptos::*;
@@ -75,7 +76,7 @@ pub fn App() -> impl IntoView {
         get_sde().await
     });
 
-    let tripwire = create_local_resource_timed(5000, move |previous_result| async move {
+    let tripwire = create_local_resource_timed(5000, async move |previous_result| {
         get_tripwire_memoable(&previous_result).await
     });
 
