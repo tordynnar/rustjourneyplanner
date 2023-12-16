@@ -1,3 +1,4 @@
+/*
 use serde::Deserialize;
 use chrono::{NaiveDateTime, Utc};
 
@@ -65,3 +66,4 @@ pub async fn get_eve_scout_memoable(previous_result : &Option<Result<EveScoutRef
 
     Ok(result)
 }
+*/

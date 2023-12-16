@@ -81,7 +81,10 @@ impl PartialEq for TripwireRefresh {
     }
 }
 
-pub async fn get_tripwire(signature_count : usize, signature_time : NaiveDateTime) -> Result<Option<TripwireRefresh>, String> {
+pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<TripwireRefresh, String> {
+    let signature_count = previous_result.as_ref().map(|v| v.signature_count).unwrap_or(0);
+    let signature_time = previous_result.as_ref().map(|v| v.signature_time).unwrap_or(NaiveDateTime::MIN);
+
     let mut data = Vec::<TripwireWormhole>::new();
 
     let baseurl = web_sys::window().ok_or_else(|| format!("Cannot get base URL"))?.origin();
@@ -104,7 +107,10 @@ pub async fn get_tripwire(signature_count : usize, signature_time : NaiveDateTim
 
     let signatures = match json["signatures"].as_object() {
         Some(s) => s,
-        None => return Ok(None)
+        None => {
+            let previous_result_value = previous_result.ok_or_else(|| format!("Tripwire signatures not present in initial refresh"))?;
+            return Ok(TripwireRefresh { wormholes : vec![], signature_count : previous_result_value.signature_count, signature_time: previous_result_value.signature_time, update_time : Utc::now().naive_utc(), update_error : None });
+        }
     };
 
     let signature_time = signatures
@@ -171,18 +177,15 @@ pub async fn get_tripwire(signature_count : usize, signature_time : NaiveDateTim
         data.push(TripwireWormhole { from_system, to_system, from_signature, to_signature, wormhole_type, lifetime, life, mass });
     }
 
-    Ok(Some(TripwireRefresh {wormholes : data, signature_count, signature_time, update_time : Utc::now().naive_utc(), update_error : None }))
+    Ok(TripwireRefresh {wormholes : data, signature_count, signature_time, update_time : Utc::now().naive_utc(), update_error : None })
 }
 
-pub async fn get_tripwire_memoable(previous_result : &Option<Result<TripwireRefresh, String>>) -> Result<TripwireRefresh, String> {
-    let previous_result = previous_result.as_ref().map(|v| v.as_ref()).map_or_else(|| None, |v| v.ok());
+/*
+pub async fn get_tripwire_memoable(previous_result : Option<Result<TripwireRefresh, String>>) -> Result<TripwireRefresh, String> {
+    let previous_result = previous_result.map_or_else(|| None, |v| v.ok());
 
-    let result = match get_tripwire(previous_result.map(|v| v.signature_count).unwrap_or(0), previous_result.map(|v| v.signature_time).unwrap_or(NaiveDateTime::MIN)).await {
-        Ok(Some(v)) => v,
-        Ok(None) => {
-            let previous_result_value = previous_result.ok_or_else(|| format!("Tripwire signatures not present in initial refresh"))?;
-            TripwireRefresh { wormholes : vec![], signature_count : previous_result_value.signature_count, signature_time: previous_result_value.signature_time, update_time : Utc::now().naive_utc(), update_error : None }
-        }
+    let result = match get_tripwire(previous_result.clone()).await {
+        Ok(v) => v,
         Err(e) => {
             let previous_result_value = previous_result.ok_or_else(|| e.clone())?;
             TripwireRefresh { wormholes : vec![], signature_count : previous_result_value.signature_count, signature_time: previous_result_value.signature_time, update_time : previous_result_value.update_time, update_error : Some(e) }
@@ -191,3 +194,4 @@ pub async fn get_tripwire_memoable(previous_result : &Option<Result<TripwireRefr
 
     Ok(result)
 }
+*/

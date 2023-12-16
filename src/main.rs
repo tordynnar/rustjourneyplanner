@@ -5,7 +5,6 @@
 use leptonic::prelude::*;
 use leptos::*;
 use leptos_icons::{BsIcon,CgIcon};
-use leptos_use::{use_interval, UseIntervalReturn};
 use web_sys;
 use petgraph::algo;
 use petgraph::visit::IntoNodeReferences;
@@ -26,7 +25,7 @@ use tripwire::*;
 use graph::*;
 use error::*;
 use signals::*;
-use eve_scout::*;
+//use eve_scout::*;
 
 pub fn hhmmss(d : Duration) -> String {
     let ss = d.num_seconds();
@@ -64,25 +63,13 @@ fn system_search_filter((s, o) : (String, Vec<System>)) -> Vec<System> {
         .collect::<Vec<System>>()
 }
 
-#[derive(Debug, Clone)]
-struct Tracker {
-    update_since : Option<Duration>,
-    update_error : Option<String>
-}
-
 #[component]
 pub fn App() -> impl IntoView {
     let sde = create_local_resource(|| (), |_| async {
         get_sde().await
     });
 
-    let (tripwire, tripwire_memo) = create_memo_local_resource_timed(5000, async move |previous_result| {
-        get_tripwire_memoable(&previous_result).await
-    });
-
-    //let tripwire_memo = create_memo(move |_|  {
-    //    tripwire.get()
-    //});
+    let (tripwire_memo, tripwire_tracker) = create_tracked_local_resource(5000, get_tripwire);
 
     /*
     let eve_scout = create_local_resource_timed(30000, async move |previous_result| {
@@ -93,24 +80,6 @@ pub fn App() -> impl IntoView {
         eve_scout.get().map_or_else(|| Err(loadingerror("Loading Eve-Scout data")), |v| v.map_err(|e| criticalerror(e)))
     });
     */
-
-    
-    let UseIntervalReturn { counter : tracker_counter, .. } = use_interval(500);
-
-    let tripwire_tracker = Signal::derive(move ||  {
-        let _ = tracker_counter.get();
-        match tripwire.get() {
-            Some(v) => match v {
-                Ok(vv) => {
-                    let update_since = Utc::now().naive_utc() - vv.update_time;
-                    Tracker { update_since : Some(update_since), update_error: vv.update_error}
-                },
-                Err(e) => Tracker { update_since : None, update_error: Some(e)}
-            },
-            None => Tracker { update_since: None, update_error: None }
-        }
-    });
-    
 
     let systems = Signal::derive(move ||  {
         match sde.get() {
@@ -124,7 +93,7 @@ pub fn App() -> impl IntoView {
     let graph = create_memo(move |_|  {
         Ok(get_graph(
             sde.get().map_or_else(|| Err(loadingerror("Loading static data")), |v| v.map_err(|e| criticalerror(e)))?,
-            tripwire_memo.get().map_or_else(|| Err(loadingerror("Loading Tripwire data")), |v| v.map_err(|e| criticalerror(e)))?.wormholes
+            tripwire_memo.get().ok_or_else(|| loadingerror("Loading Tripwire data"))?.wormholes
         ))
     });
 
@@ -242,11 +211,11 @@ pub fn App() -> impl IntoView {
                         <div>
                             {move || {
                                 let tracker = tripwire_tracker.get();
-                                match (tracker.update_since, tracker.update_error) {
+                                match (tracker.update_time, tracker.update_error) {
                                     (None, None) => view! { <div>"Loading..."</div> }.into_view(),
-                                    (Some(since), Some(e)) => view! { <div class="redfg">{ format!("{}, Tripwire Update: {}", e, hhmmss(since)) }</div> }.into_view(),
+                                    (Some(update_time), Some(e)) => view! { <div class="redfg">{ format!("{}, Tripwire Update: {}", e, hhmmss(Utc::now().naive_utc() - update_time)) }</div> }.into_view(),
                                     (None, Some(e)) =>  view! { <div class="redfg">{ format!("{}", e) }</div> }.into_view(),
-                                    (Some(since), None) =>  view! { <div>{ format!("Tripwire Update: {}", hhmmss(since)) }</div> }.into_view(),
+                                    (Some(update_time), None) =>  view! { <div>{ format!("Tripwire Update: {}", hhmmss(Utc::now().naive_utc() - update_time)) }</div> }.into_view(),
                                 }
                             }}
                         </div>
