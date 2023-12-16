@@ -383,6 +383,7 @@ pub fn App() -> impl IntoView {
                                     <th>"Life"</th>
                                     <th>"Mass"</th>
                                     <th>"Jump Mass"</th>
+                                    <th>"Source"</th>
                                     <th>"Actions"</th>
                                 </tr>
                             </thead>
@@ -443,10 +444,17 @@ pub fn App() -> impl IntoView {
                                                                 Some(v) => view! { <td>{ format!("{}", v) }</td> }.into_view(),
                                                             }
                                                         }
+                                                        {
+                                                            match wormhole.source {
+                                                                WormholeSource::Tripwire => view! { <td>"Tripwire"</td> }.into_view(),
+                                                                WormholeSource::EveScout => view! { <td>"EvE-Scout"</td> }.into_view(),
+                                                            }
+                                                        }
                                                     }
                                                 },
                                                 Connection::Gate => {
                                                     view! {
+                                                        <td>" "</td>
                                                         <td>" "</td>
                                                         <td>" "</td>
                                                         <td>" "</td>
