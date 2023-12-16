@@ -70,16 +70,7 @@ pub fn App() -> impl IntoView {
     });
 
     let (tripwire_memo, tripwire_tracker) = create_tracked_local_resource(5000, get_tripwire);
-
-    /*
-    let eve_scout = create_local_resource_timed(30000, async move |previous_result| {
-        get_eve_scout_memoable(&previous_result).await
-    });
-
-    let eve_scout_memo = create_memo(move |_|  {
-        eve_scout.get().map_or_else(|| Err(loadingerror("Loading Eve-Scout data")), |v| v.map_err(|e| criticalerror(e)))
-    });
-    */
+    let (eve_scout_memo, eve_scout_tracker) = create_tracked_local_resource(5000, get_eve_scout);
 
     let systems = Signal::derive(move ||  {
         match sde.get() {
@@ -207,7 +198,18 @@ pub fn App() -> impl IntoView {
                         </div>
                     </Stack>
                     <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
-                        
+                        <div>
+                            {move || {
+                                let tracker = eve_scout_tracker.get();
+                                match (tracker.update_time, tracker.update_error) {
+                                    (None, None) => view! { <div>"Loading EvE-Scout..."</div> }.into_view(),
+                                    (Some(update_time), Some(e)) => view! { <div class="redfg">{ format!("{}, EvE-Scout Update: {}", e, hhmmss(Utc::now().naive_utc() - update_time)) }</div> }.into_view(),
+                                    (None, Some(e)) =>  view! { <div class="redfg">{ format!("{}", e) }</div> }.into_view(),
+                                    (Some(update_time), None) =>  view! { <div>{ format!("EvE-Scout Update: {}", hhmmss(Utc::now().naive_utc() - update_time)) }</div> }.into_view(),
+                                }
+                            }}
+                        </div>
+                        " | "
                         <div>
                             {move || {
                                 let tracker = tripwire_tracker.get();

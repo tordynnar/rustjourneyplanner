@@ -1,6 +1,5 @@
-/*
 use serde::Deserialize;
-use chrono::{NaiveDateTime, Utc};
+use chrono::NaiveDateTime;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct EveScoutWormhole {
@@ -17,13 +16,11 @@ pub struct EveScoutWormhole {
 pub struct EveScoutRefresh {
     pub wormholes : Vec::<EveScoutWormhole>,
     pub signature_count : usize,
-    pub signature_time : NaiveDateTime,
-    pub update_time : NaiveDateTime,
-    pub update_error : Option<String>
+    pub signature_time : NaiveDateTime
 }
 
 impl PartialEq for EveScoutRefresh {
-    pub fn eq(&self, other: &EveScoutRefresh) -> bool {
+    fn eq(&self, other: &EveScoutRefresh) -> bool {
         self.signature_time.eq(&other.signature_time) && self.signature_count.eq(&other.signature_count)
     }
 }
@@ -50,6 +47,5 @@ pub async fn get_eve_scout(_ : Option<EveScoutRefresh>) -> Result<EveScoutRefres
         .max()
         .unwrap_or(NaiveDateTime::MIN);
 
-    Ok(EveScoutRefresh { wormholes, signature_count, signature_time, update_time : Utc::now().naive_utc(), update_error: None })
+    Ok(EveScoutRefresh { wormholes, signature_count, signature_time })
 }
-*/
