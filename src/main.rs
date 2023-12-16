@@ -20,11 +20,13 @@ mod error;
 mod helpers;
 mod attr;
 mod signals;
+mod eve_scout;
 
 use tripwire::*;
 use graph::*;
 use error::*;
 use signals::*;
+use eve_scout::*;
 
 pub fn hhmmss(d : Duration) -> String {
     let ss = d.num_seconds();
@@ -63,40 +65,52 @@ fn system_search_filter((s, o) : (String, Vec<System>)) -> Vec<System> {
 }
 
 #[derive(Debug, Clone)]
-struct TripwireTracker {
+struct Tracker {
     update_since : Option<Duration>,
     update_error : Option<String>
 }
 
 #[component]
 pub fn App() -> impl IntoView {
-    let UseIntervalReturn { counter : tripwire_tracker_counter, .. } = use_interval(500);
-
     let sde = create_local_resource(|| (), |_| async {
         get_sde().await
     });
 
-    let tripwire = create_local_resource_timed(5000, async move |previous_result| {
+    let (tripwire, tripwire_memo) = create_memo_local_resource_timed(5000, async move |previous_result| {
         get_tripwire_memoable(&previous_result).await
     });
 
-    let tripwire_memo = create_memo(move |_|  {
-        tripwire.get().map_or_else(|| Err(loadingerror("Loading Tripwire data")), |v| v.map_err(|e| criticalerror(e)))
+    //let tripwire_memo = create_memo(move |_|  {
+    //    tripwire.get()
+    //});
+
+    /*
+    let eve_scout = create_local_resource_timed(30000, async move |previous_result| {
+        get_eve_scout_memoable(&previous_result).await
     });
 
+    let eve_scout_memo = create_memo(move |_|  {
+        eve_scout.get().map_or_else(|| Err(loadingerror("Loading Eve-Scout data")), |v| v.map_err(|e| criticalerror(e)))
+    });
+    */
+
+    
+    let UseIntervalReturn { counter : tracker_counter, .. } = use_interval(500);
+
     let tripwire_tracker = Signal::derive(move ||  {
-        let _ = tripwire_tracker_counter.get();
+        let _ = tracker_counter.get();
         match tripwire.get() {
             Some(v) => match v {
                 Ok(vv) => {
                     let update_since = Utc::now().naive_utc() - vv.update_time;
-                    TripwireTracker { update_since : Some(update_since), update_error: vv.update_error}
+                    Tracker { update_since : Some(update_since), update_error: vv.update_error}
                 },
-                Err(e) => TripwireTracker { update_since : None, update_error: Some(e)}
+                Err(e) => Tracker { update_since : None, update_error: Some(e)}
             },
-            None => TripwireTracker { update_since: None, update_error: None }
+            None => Tracker { update_since: None, update_error: None }
         }
     });
+    
 
     let systems = Signal::derive(move ||  {
         match sde.get() {
@@ -110,7 +124,7 @@ pub fn App() -> impl IntoView {
     let graph = create_memo(move |_|  {
         Ok(get_graph(
             sde.get().map_or_else(|| Err(loadingerror("Loading static data")), |v| v.map_err(|e| criticalerror(e)))?,
-            tripwire_memo.get()?.wormholes
+            tripwire_memo.get().map_or_else(|| Err(loadingerror("Loading Tripwire data")), |v| v.map_err(|e| criticalerror(e)))?.wormholes
         ))
     });
 
@@ -224,6 +238,7 @@ pub fn App() -> impl IntoView {
                         </div>
                     </Stack>
                     <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
+                        
                         <div>
                             {move || {
                                 let tracker = tripwire_tracker.get();
@@ -235,6 +250,7 @@ pub fn App() -> impl IntoView {
                                 }
                             }}
                         </div>
+                        
                         <LinkExt href="https://github.com/tordynnar/rustjourneyplanner" target=LinkExtTarget::Blank>
                             <Icon id="github-icon" icon=BsIcon::BsGithub aria_label="GitHub icon"/>
                         </LinkExt>
