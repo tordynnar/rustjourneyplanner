@@ -1,6 +1,7 @@
 #![feature(array_try_map)]
 #![feature(lazy_cell)]
 #![feature(async_closure)]
+#![feature(let_chains)]
 
 use leptonic::prelude::*;
 use leptos::*;
@@ -97,6 +98,8 @@ pub fn App() -> impl IntoView {
     let (exclude_nullsec, set_exclude_nullsec) = create_signal(false);
     let (exclude_voc, set_exclude_voc) = create_signal(false);
     let (exclude_eol, set_exclude_eol) = create_signal(false);
+    let (exclude_eve_scout, set_exclude_eve_scout) = create_signal(false);
+    let (exclude_zarzakh, set_exclude_zarzakh) = create_signal(false);
     
     let route = Signal::derive(move || -> Result<Vec<(System,Connection)>,ErrorStatus> {
         let graph = graph.get()?.value;
@@ -108,16 +111,20 @@ pub fn App() -> impl IntoView {
         let exclude_nullsec = exclude_nullsec.get();
         let exclude_voc = exclude_voc.get();
         let exclude_eol = exclude_eol.get();
+        let exclude_eve_scout = exclude_eve_scout.get();
+        let exclude_zarzakh = exclude_zarzakh.get();
 
         let filtered_graph = graph.filter_map(|_, system| {
             if avoid_systems.contains(system) { return None }
             if exclude_lowsec && system.class == SystemClass::Lowsec { return None }
             if exclude_nullsec && system.class == SystemClass::Nullsec { return None }
+            if exclude_zarzakh && system.class == SystemClass::Zarzakh { return None }
             Some(system.clone())
         }, |_, connection| {
             if let Connection::Wormhole(wormhole) = connection {
                 if exclude_voc && wormhole.mass == WormholeMass::VOC { return None }
                 if exclude_eol && wormhole.life == WormholeLife::EOL { return None }
+                if exclude_eve_scout && wormhole.source == WormholeSource::EveScout { return None }
                 if let Some(jump_mass) = wormhole.jump_mass {
                     if ship_size > jump_mass { return None }
                 }
@@ -162,11 +169,8 @@ pub fn App() -> impl IntoView {
         let mut previous_connection : Option<Connection> = None;
         for (system, connection) in &route {
             if let Connection::Wormhole(w) = connection {
-                if let Some(s) = previous_system {
-                    match previous_connection {
-                        Some(Connection::Gate) => result.push(s.name.clone()),
-                        _ => ()
-                    };
+                if let Some(s) = previous_system && previous_connection == Some(Connection::Gate) {
+                    result.push(s.name.clone());
                 }
                 result.push(w.signature.as_deref().unwrap_or("???")[..3].to_owned());
             }
@@ -313,30 +317,42 @@ pub fn App() -> impl IntoView {
                         </Col>
                     </Row>
                     <Row>
-                        <Col md=6>
+                        <Col md=4>
                             <div class="toggle">
                                 <Toggle state=exclude_lowsec set_state=set_exclude_lowsec/>
                                 <label>"Exclude Lowsec"</label>
                             </div>
                         </Col>
-                        <Col md=6>
+                        <Col md=4>
                             <div class="toggle">
                                 <Toggle state=exclude_voc set_state=set_exclude_voc/>
                                 <label>"Exclude VOC"</label>
                             </div>
                         </Col>
+                        <Col md=4>
+                            <div class="toggle">
+                                <Toggle state=exclude_eve_scout set_state=set_exclude_eve_scout/>
+                                <label>"Exclude Eve-Scout"</label>
+                            </div>
+                        </Col>
                     </Row>
                     <Row>
-                        <Col md=6>
+                        <Col md=4>
                             <div class="toggle">
                                 <Toggle state=exclude_nullsec set_state=set_exclude_nullsec/>
                                 <label>"Exclude Nullsec"</label>
                             </div>
                         </Col>
-                        <Col md=6>
+                        <Col md=4>
                             <div class="toggle">
                                 <Toggle state=exclude_eol set_state=set_exclude_eol/>
                                 <label>"Exclude EOL"</label>
+                            </div>
+                        </Col>
+                        <Col md=4>
+                            <div class="toggle">
+                                <Toggle state=exclude_zarzakh set_state=set_exclude_zarzakh/>
+                                <label>"Exclude Zarzakh"</label>
                             </div>
                         </Col>
                     </Row>
@@ -389,11 +405,11 @@ pub fn App() -> impl IntoView {
                                                     SystemClass::Nullsec => "NS",
                                                     SystemClass::Thera => "Thera",
                                                     SystemClass::C13 => "C13",
-                                                    SystemClass::DrifterBarbican => "Drifter (Barbican)",
-                                                    SystemClass::DrifterConflux => "Drifter (Conflux)",
-                                                    SystemClass::DrifterRedoubt => "Drifter (Redoubt)",
-                                                    SystemClass::DrifterSentinel => "Drifter (Sentinel)",
-                                                    SystemClass::DrifterVidette => "Drifter (Vidette)",
+                                                    SystemClass::DrifterBarbican => "Drifter",
+                                                    SystemClass::DrifterConflux => "Drifter",
+                                                    SystemClass::DrifterRedoubt => "Drifter",
+                                                    SystemClass::DrifterSentinel => "Drifter",
+                                                    SystemClass::DrifterVidette => "Drifter",
                                                     SystemClass::Pochven => "Pochven",
                                                     SystemClass::Zarzakh => "Zarzakh",
                                                 };

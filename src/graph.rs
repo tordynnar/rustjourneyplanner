@@ -9,19 +9,24 @@ use crate::eve_scout::*;
 use crate::helpers::*;
 use crate::attr::*;
 
-// TODO: Record the source of the wormhole
+#[derive(Debug, Clone, PartialEq)]
+pub enum WormholeSource {
+    Tripwire,
+    EveScout
+}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct WormholeAttributes {
     pub signature : Option<String>,
     pub other_signature : Option<String>,
     pub wormhole_type : Option<String>,
     pub life : WormholeLife,
     pub mass : WormholeMass,
-    pub jump_mass : Option<u32>
+    pub jump_mass : Option<u32>,
+    pub source : WormholeSource
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Connection {
     Wormhole(WormholeAttributes),
     Gate
@@ -68,7 +73,8 @@ pub fn get_graph(sde : Vec<System>, tripwire_refresh : Option<TripwireRefresh>, 
                     wormhole_type : wormhole.wormhole_type.clone(),
                     life : wormhole.life.clone(),
                     mass : wormhole.mass.clone(),
-                    jump_mass : jump_mass.clone()
+                    jump_mass : jump_mass.clone(),
+                    source : WormholeSource::Tripwire
                 })
             );
 
@@ -80,7 +86,8 @@ pub fn get_graph(sde : Vec<System>, tripwire_refresh : Option<TripwireRefresh>, 
                     wormhole_type : wormhole.wormhole_type,
                     life : wormhole.life,
                     mass : wormhole.mass,
-                    jump_mass
+                    jump_mass,
+                    source : WormholeSource::Tripwire
                 })
             );
         }
@@ -103,7 +110,8 @@ pub fn get_graph(sde : Vec<System>, tripwire_refresh : Option<TripwireRefresh>, 
                     wormhole_type : Some(wormhole.wh_type.clone()),
                     life : WormholeLife::Stable,
                     mass : WormholeMass::Stable,
-                    jump_mass : jump_mass.clone()
+                    jump_mass : jump_mass.clone(),
+                    source : WormholeSource::EveScout
                 })
             );
 
@@ -115,7 +123,8 @@ pub fn get_graph(sde : Vec<System>, tripwire_refresh : Option<TripwireRefresh>, 
                     wormhole_type : Some(wormhole.wh_type.clone()),
                     life : WormholeLife::Stable,
                     mass : WormholeMass::Stable,
-                    jump_mass
+                    jump_mass,
+                    source : WormholeSource::EveScout
                 })
             );
         }
