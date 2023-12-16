@@ -10,7 +10,7 @@ where
     Fu: Future<Output = T> + 'static,
 {
     let (refresh, set_refresh) = create_signal(0u64);
-    let previous_result = store_value::<Option<T>>(None);
+    let previous_result = store_value::<Option<T>>(None);  // default value goes here
 
     let resource = create_local_resource(move || { refresh.get() }, async move |_| {
         // This closure is not reentrant. store_value::get_value/set_value
@@ -24,7 +24,7 @@ where
     });
 
     let memo = create_memo(move |_|  {
-        resource.get()
+        resource.get()   // unwrap_or default value goes here
     });
 
     (resource, memo)
