@@ -71,8 +71,6 @@ pub struct TripwireRefresh {
     pub wormholes : Vec::<TripwireWormhole>,
     pub signature_count : usize,
     pub signature_time : NaiveDateTime,
-    pub update_time : NaiveDateTime,
-    pub update_error : Option<String>
 }
 
 impl PartialEq for TripwireRefresh {
@@ -109,7 +107,7 @@ pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<T
         Some(s) => s,
         None => {
             let previous_result_value = previous_result.ok_or_else(|| format!("Tripwire signatures not present in initial refresh"))?;
-            return Ok(TripwireRefresh { wormholes : vec![], signature_count : previous_result_value.signature_count, signature_time: previous_result_value.signature_time, update_time : Utc::now().naive_utc(), update_error : None });
+            return Ok(TripwireRefresh { wormholes : vec![], signature_count : previous_result_value.signature_count, signature_time: previous_result_value.signature_time });
         }
     };
 
@@ -177,21 +175,5 @@ pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<T
         data.push(TripwireWormhole { from_system, to_system, from_signature, to_signature, wormhole_type, lifetime, life, mass });
     }
 
-    Ok(TripwireRefresh {wormholes : data, signature_count, signature_time, update_time : Utc::now().naive_utc(), update_error : None })
+    Ok(TripwireRefresh {wormholes : data, signature_count, signature_time })
 }
-
-/*
-pub async fn get_tripwire_memoable(previous_result : Option<Result<TripwireRefresh, String>>) -> Result<TripwireRefresh, String> {
-    let previous_result = previous_result.map_or_else(|| None, |v| v.ok());
-
-    let result = match get_tripwire(previous_result.clone()).await {
-        Ok(v) => v,
-        Err(e) => {
-            let previous_result_value = previous_result.ok_or_else(|| e.clone())?;
-            TripwireRefresh { wormholes : vec![], signature_count : previous_result_value.signature_count, signature_time: previous_result_value.signature_time, update_time : previous_result_value.update_time, update_error : Some(e) }
-        }
-    };
-
-    Ok(result)
-}
-*/

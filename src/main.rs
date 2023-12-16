@@ -25,7 +25,7 @@ use tripwire::*;
 use graph::*;
 use error::*;
 use signals::*;
-//use eve_scout::*;
+use eve_scout::*;
 
 pub fn hhmmss(d : Duration) -> String {
     let ss = d.num_seconds();
@@ -212,7 +212,7 @@ pub fn App() -> impl IntoView {
                             {move || {
                                 let tracker = tripwire_tracker.get();
                                 match (tracker.update_time, tracker.update_error) {
-                                    (None, None) => view! { <div>"Loading..."</div> }.into_view(),
+                                    (None, None) => view! { <div>"Loading Tripwire..."</div> }.into_view(),
                                     (Some(update_time), Some(e)) => view! { <div class="redfg">{ format!("{}, Tripwire Update: {}", e, hhmmss(Utc::now().naive_utc() - update_time)) }</div> }.into_view(),
                                     (None, Some(e)) =>  view! { <div class="redfg">{ format!("{}", e) }</div> }.into_view(),
                                     (Some(update_time), None) =>  view! { <div>{ format!("Tripwire Update: {}", hhmmss(Utc::now().naive_utc() - update_time)) }</div> }.into_view(),
