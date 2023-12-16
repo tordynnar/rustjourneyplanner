@@ -3,7 +3,6 @@ use std::convert::From;
 use chrono::{NaiveDateTime, Utc, Duration};
 use web_sys;
 use tracing::info;
-use std::sync::{LazyLock, Mutex};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum WormholeLife {
@@ -175,22 +174,20 @@ pub async fn get_tripwire(signature_count : usize, signature_time : NaiveDateTim
     Ok(Some(TripwireRefresh {wormholes : data, signature_count, signature_time, update_time : Utc::now().naive_utc(), update_error : None }))
 }
 
-pub async fn get_tripwire_memoable() -> Result<TripwireRefresh, String> {
-    static LAST_RESULT: LazyLock<Mutex<Option<TripwireRefresh>>> = LazyLock::new(|| Mutex::new(None));
-    let mut last_result = LAST_RESULT.lock().map_err(|_| format!("Failed to acquire mutex"))?;
+pub async fn get_tripwire_memoable(previous_result : &Option<Result<TripwireRefresh, String>>) -> Result<TripwireRefresh, String> {
+    let previous_result = previous_result.as_ref().map(|v| v.as_ref()).map_or_else(|| None, |v| v.ok());
 
-    let result = match get_tripwire(last_result.as_ref().map(|v| v.signature_count).unwrap_or(0), last_result.as_ref().map(|v| v.signature_time).unwrap_or(NaiveDateTime::MIN)).await {
+    let result = match get_tripwire(previous_result.map(|v| v.signature_count).unwrap_or(0), previous_result.map(|v| v.signature_time).unwrap_or(NaiveDateTime::MIN)).await {
         Ok(Some(v)) => v,
         Ok(None) => {
-            let last_result_value = last_result.as_ref().ok_or_else(|| format!("Tripwire signatures not present in initial refresh"))?;
-            TripwireRefresh { wormholes : vec![], signature_count : last_result_value.signature_count, signature_time: last_result_value.signature_time, update_time : Utc::now().naive_utc(), update_error : None }
+            let previous_result_value = previous_result.ok_or_else(|| format!("Tripwire signatures not present in initial refresh"))?;
+            TripwireRefresh { wormholes : vec![], signature_count : previous_result_value.signature_count, signature_time: previous_result_value.signature_time, update_time : Utc::now().naive_utc(), update_error : None }
         }
         Err(e) => {
-            let last_result_value = last_result.as_ref().ok_or_else(|| e.clone())?;
-            TripwireRefresh { wormholes : vec![], signature_count : last_result_value.signature_count, signature_time: last_result_value.signature_time, update_time : last_result_value.update_time, update_error : Some(e) }
+            let previous_result_value = previous_result.ok_or_else(|| e.clone())?;
+            TripwireRefresh { wormholes : vec![], signature_count : previous_result_value.signature_count, signature_time: previous_result_value.signature_time, update_time : previous_result_value.update_time, update_error : Some(e) }
         }
     };
 
-    *last_result = Some(TripwireRefresh { wormholes : vec![], signature_count : result.signature_count, signature_time: result.signature_time, update_time : result.update_time, update_error : result.update_error.clone() });
     Ok(result)
 }
