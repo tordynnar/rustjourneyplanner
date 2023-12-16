@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use chrono::NaiveDateTime;
+use web_sys;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct EveScoutWormhole {
@@ -27,7 +28,13 @@ impl PartialEq for EveScoutRefresh {
 
 pub async fn get_eve_scout(_ : Option<EveScoutRefresh>) -> Result<EveScoutRefresh, String> {
     let client = reqwest::Client::new();
-    let result = client.get(format!("https://corsproxy.io/?{}", urlencoding::encode("https://api.eve-scout.com/v2/public/signatures")))
+
+    let baseurl = web_sys::window().ok_or_else(|| format!("Cannot get base URL"))?.origin();
+
+    // URL using CORS proxy: format!("https://corsproxy.io/?{}", urlencoding::encode("https://api.eve-scout.com/v2/public/signatures"))
+    // This seems to be aggressively cached, and is very out-of-date!
+
+    let result = client.get(format!("{baseurl}/cached_third_party.php?key=eve-scout-signatures"))   
         .send().await.map_err(|_| format!("EvE-Scout HTTP request failed"))?
         .error_for_status().map_err(|_| format!("EvE-Scout HTTP request failed"))?
         .bytes().await.map_err(|_| format!("EvE-Scout HTTP request failed"))?;

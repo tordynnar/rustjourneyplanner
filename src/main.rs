@@ -70,7 +70,7 @@ pub fn App() -> impl IntoView {
     });
 
     let (tripwire_memo, tripwire_tracker) = create_tracked_local_resource(5000, get_tripwire);
-    let (eve_scout_memo, eve_scout_tracker) = create_tracked_local_resource(5000, get_eve_scout);
+    let (eve_scout_memo, eve_scout_tracker) = create_tracked_local_resource(30000, get_eve_scout);
 
     let systems = Signal::derive(move ||  {
         match sde.get() {
@@ -84,7 +84,8 @@ pub fn App() -> impl IntoView {
     let graph = create_memo(move |_|  {
         Ok(get_graph(
             sde.get().map_or_else(|| Err(loadingerror("Loading static data")), |v| v.map_err(|e| criticalerror(e)))?,
-            tripwire_memo.get()
+            tripwire_memo.get(),
+            eve_scout_memo.get()
         ))
     });
 

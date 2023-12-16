@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::ops::Deref;
-use chrono::NaiveDateTime;
 use petgraph::graph::{Graph, NodeIndex};
 use eve_sde::System;
 use tracing::{info,warn};
@@ -10,12 +9,13 @@ use crate::eve_scout::*;
 use crate::helpers::*;
 use crate::attr::*;
 
+// TODO: Record the source of the wormhole
+
 #[derive(Debug, Clone)]
 pub struct WormholeAttributes {
     pub signature : Option<String>,
     pub other_signature : Option<String>,
     pub wormhole_type : Option<String>,
-    pub lifetime : NaiveDateTime,
     pub life : WormholeLife,
     pub mass : WormholeMass,
     pub jump_mass : Option<u32>
@@ -27,7 +27,7 @@ pub enum Connection {
     Gate
 }
 
-pub fn get_graph(sde : Vec<System>, tripwire_refresh : Option<TripwireRefresh>) -> NeverEq<Graph<System, Connection>> {
+pub fn get_graph(sde : Vec<System>, tripwire_refresh : Option<TripwireRefresh>, eve_scout_refresh : Option<EveScoutRefresh>) -> NeverEq<Graph<System, Connection>> {
     info!("Constructing graph");
     
     let mut graph = Graph::<System, Connection>::new();
@@ -66,7 +66,6 @@ pub fn get_graph(sde : Vec<System>, tripwire_refresh : Option<TripwireRefresh>) 
                     signature : wormhole.from_signature.clone(),
                     other_signature : wormhole.to_signature.clone(),
                     wormhole_type : wormhole.wormhole_type.clone(),
-                    lifetime : wormhole.lifetime.clone(),
                     life : wormhole.life.clone(),
                     mass : wormhole.mass.clone(),
                     jump_mass : jump_mass.clone()
@@ -79,9 +78,43 @@ pub fn get_graph(sde : Vec<System>, tripwire_refresh : Option<TripwireRefresh>) 
                     signature : wormhole.to_signature,
                     other_signature : wormhole.from_signature,
                     wormhole_type : wormhole.wormhole_type,
-                    lifetime : wormhole.lifetime,
                     life : wormhole.life,
                     mass : wormhole.mass,
+                    jump_mass
+                })
+            );
+        }
+    }
+
+    if let Some(eve_scout_refresh) = eve_scout_refresh {
+        for wormhole in eve_scout_refresh.wormholes {
+            let jump_mass = WORMHOLE_ATTR.get(&wormhole.wh_type).copied();
+
+            let [in_index, out_index] = match [wormhole.in_system_id, wormhole.out_system_id].try_map(|s| { node_index.get(&s) }) {
+                Some(s) => s,
+                None => { warn!("Eve-Scout has a system not in the SDE"); continue; }
+            };
+
+            graph.add_edge(
+                *in_index, *out_index,
+                Connection::Wormhole(WormholeAttributes {
+                    signature : Some(wormhole.in_signature.clone()),
+                    other_signature : Some(wormhole.out_signature.clone()),
+                    wormhole_type : Some(wormhole.wh_type.clone()),
+                    life : WormholeLife::Stable,
+                    mass : WormholeMass::Stable,
+                    jump_mass : jump_mass.clone()
+                })
+            );
+
+            graph.add_edge(
+                *out_index, *in_index,
+                Connection::Wormhole(WormholeAttributes {
+                    signature : Some(wormhole.out_signature.clone()),
+                    other_signature : Some(wormhole.in_signature.clone()),
+                    wormhole_type : Some(wormhole.wh_type.clone()),
+                    life : WormholeLife::Stable,
+                    mass : WormholeMass::Stable,
                     jump_mass
                 })
             );
