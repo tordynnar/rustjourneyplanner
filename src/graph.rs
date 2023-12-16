@@ -6,6 +6,7 @@ use eve_sde::System;
 use tracing::{info,warn};
 
 use crate::tripwire::*;
+use crate::eve_scout::*;
 use crate::helpers::*;
 use crate::attr::*;
 
@@ -26,7 +27,7 @@ pub enum Connection {
     Gate
 }
 
-pub fn get_graph(sde : Vec<System>, tripwire_data : Vec::<TripwireWormhole>) -> NeverEq<Graph::<System, Connection>> {
+pub fn get_graph(sde : Vec<System>, tripwire_refresh : Option<TripwireRefresh>) -> NeverEq<Graph<System, Connection>> {
     info!("Constructing graph");
     
     let mut graph = Graph::<System, Connection>::new();
@@ -45,44 +46,46 @@ pub fn get_graph(sde : Vec<System>, tripwire_data : Vec::<TripwireWormhole>) -> 
         }
     }
 
-    for wormhole in tripwire_data {
-        let jump_mass = wormhole.wormhole_type.as_ref().and_then(|t| WORMHOLE_ATTR.deref().get(t).copied());
+    if let Some(tripwire_refresh) = tripwire_refresh {
+        for wormhole in tripwire_refresh.wormholes {
+            let jump_mass = wormhole.wormhole_type.as_ref().and_then(|t| WORMHOLE_ATTR.deref().get(t).copied());
 
-        let to_system = match wormhole.to_system {
-            SystemOrClass::SpecificSystem(v) => v,
-            _ => continue
-        };
+            let to_system = match wormhole.to_system {
+                SystemOrClass::SpecificSystem(v) => v,
+                _ => continue
+            };
 
-        let [from_index, to_index] = match [wormhole.from_system, to_system].try_map(|s| { node_index.get(&s) }) {
-            Some(s) => s,
-            None => { warn!("Tripwire has a system not in the SDE"); continue; }
-        };
+            let [from_index, to_index] = match [wormhole.from_system, to_system].try_map(|s| { node_index.get(&s) }) {
+                Some(s) => s,
+                None => { warn!("Tripwire has a system not in the SDE"); continue; }
+            };
 
-        graph.add_edge(
-            *from_index, *to_index,
-            Connection::Wormhole(WormholeAttributes {
-                signature : wormhole.from_signature.clone(),
-                other_signature : wormhole.to_signature.clone(),
-                wormhole_type : wormhole.wormhole_type.clone(),
-                lifetime : wormhole.lifetime.clone(),
-                life : wormhole.life.clone(),
-                mass : wormhole.mass.clone(),
-                jump_mass : jump_mass.clone()
-            })
-        );
+            graph.add_edge(
+                *from_index, *to_index,
+                Connection::Wormhole(WormholeAttributes {
+                    signature : wormhole.from_signature.clone(),
+                    other_signature : wormhole.to_signature.clone(),
+                    wormhole_type : wormhole.wormhole_type.clone(),
+                    lifetime : wormhole.lifetime.clone(),
+                    life : wormhole.life.clone(),
+                    mass : wormhole.mass.clone(),
+                    jump_mass : jump_mass.clone()
+                })
+            );
 
-        graph.add_edge(
-            *to_index, *from_index,
-            Connection::Wormhole(WormholeAttributes {
-                signature : wormhole.to_signature,
-                other_signature : wormhole.from_signature,
-                wormhole_type : wormhole.wormhole_type,
-                lifetime : wormhole.lifetime,
-                life : wormhole.life,
-                mass : wormhole.mass,
-                jump_mass
-            })
-        );
+            graph.add_edge(
+                *to_index, *from_index,
+                Connection::Wormhole(WormholeAttributes {
+                    signature : wormhole.to_signature,
+                    other_signature : wormhole.from_signature,
+                    wormhole_type : wormhole.wormhole_type,
+                    lifetime : wormhole.lifetime,
+                    life : wormhole.life,
+                    mass : wormhole.mass,
+                    jump_mass
+                })
+            );
+        }
     }
 
     NeverEq::<Graph::<System, Connection>> { value : graph }

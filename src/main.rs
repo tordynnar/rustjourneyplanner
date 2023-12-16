@@ -84,7 +84,7 @@ pub fn App() -> impl IntoView {
     let graph = create_memo(move |_|  {
         Ok(get_graph(
             sde.get().map_or_else(|| Err(loadingerror("Loading static data")), |v| v.map_err(|e| criticalerror(e)))?,
-            tripwire_memo.get().ok_or_else(|| loadingerror("Loading Tripwire data"))?.wormholes
+            tripwire_memo.get()
         ))
     });
 
