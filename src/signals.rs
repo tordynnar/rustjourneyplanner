@@ -13,8 +13,8 @@ where
     let previous_result = store_value::<Option<T>>(None);
 
     create_local_resource(move || { refresh.get() }, move |_| async move {
-        // This closure is not reentrant. store_value::with_value/set_value
-        // calls borrow/borrow_mut instead of try_borrow/try_borrow_mut on
+        // This closure is not reentrant. store_value::get_value/set_value
+        // call borrow/borrow_mut instead of try_borrow/try_borrow_mut on
         // a RefCell, which means it will panic when called in parallel.
 
         let result = fetcher(previous_result.get_value()).await;
