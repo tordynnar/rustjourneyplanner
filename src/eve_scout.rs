@@ -26,8 +26,6 @@ impl PartialEq for EveScoutRefresh {
 }
 
 pub async fn get_eve_scout(_ : Option<EveScoutRefresh>) -> Result<EveScoutRefresh, String> {
-    tracing::info!("EvE Scout updating...");
-
     let client = reqwest::Client::new();
     let result = client.get(format!("https://corsproxy.io/?{}", urlencoding::encode("https://api.eve-scout.com/v2/public/signatures")))
         .send().await.map_err(|_| format!("EvE-Scout HTTP request failed"))?
