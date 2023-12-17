@@ -81,7 +81,7 @@ pub struct TripwireWormhole {
     pub mass : WormholeMass
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum SystemOrClass {
     SpecificSystem(u32),
     Nullsec,
@@ -185,6 +185,10 @@ pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<T
     let wormholes = json.wormholes.ok_or_else(|| format!("Tripwire wormholes not present"))?;
 
     for (wormhole_id, wormhole) in wormholes {
+        let from = signatures.get(&wormhole.initial_id).ok_or_else(|| format!("Tripwire initial signature details missing from {}", wormhole_id))?;
+        let to = signatures.get(&wormhole.secondary_id).ok_or_else(|| format!("Tripwire secondary signature details missing from {}", wormhole_id))?;
+
+        /*
         let [(from_system, from_signature, from_life_time), (to_system, to_signature, to_life_time)] = [wormhole.initial_id, wormhole.secondary_id]
             .try_map(|v| signatures.get(&v))
             .ok_or_else(|| format!("Tripwire signature details missing from wormhole {}", wormhole_id))?
@@ -195,10 +199,11 @@ pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<T
                     signature.life_time.clone()
                 )
             });
+        */
 
-        let from_system = match from_system { SystemOrClass::SpecificSystem(v) => v, _ => continue };
+        let from_system = match from.system_id { SystemOrClass::SpecificSystem(v) => v, _ => continue };
         let wormhole_type = wormhole.wormhole_type.as_deref().and_then(|v| match v { "????" => None, "" => None, _ => Some(v.to_owned()) });
-        let life_time = [from_life_time, to_life_time].into_iter().max().unwrap();
+        let life_time = [from.life_time, to.life_time].into_iter().max().unwrap();
         let age = Utc::now().naive_utc() - life_time;
 
         let life = match wormhole.life.as_ref() {
@@ -224,12 +229,12 @@ pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<T
         if age > Duration::hours(24) { continue }
 
         // Probably created by a deathclone
-        if from_signature == None && to_signature == None { continue }
+        if from.signature_id == None && to.signature_id == None { continue }
 
         // Don't want gates, already have then in the static data
-        if wormhole_type == Some("GATE".to_owned()) || from_signature == Some("GAT".to_owned()) || to_signature == Some("GAT".to_owned()) { continue }
+        if wormhole_type == Some("GATE".to_owned()) || from.signature_id == Some("GAT".to_owned()) || to.signature_id == Some("GAT".to_owned()) { continue }
 
-        data.push(TripwireWormhole { from_system, to_system, from_signature, to_signature, wormhole_type, life_time, life, mass });
+        data.push(TripwireWormhole { from_system, to_system : to.system_id, from_signature : from.signature_id.clone(), to_signature : to.signature_id.clone(), wormhole_type, life_time, life, mass });
     }
 
     Ok(TripwireRefresh {wormholes : data, signature_count, signature_time })
