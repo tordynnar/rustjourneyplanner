@@ -3,7 +3,20 @@ use std::convert::From;
 use chrono::{NaiveDateTime, Utc, Duration};
 use web_sys;
 use tracing::info;
-use serde::Deserialize;
+use serde::{de::Error, Deserialize, Deserializer};
+use serde_json;
+
+fn deserialize_system_id<'de, D>(deserializer: D) -> Result<SystemOrClass, D::Error> where D: Deserializer<'de> {
+    let s: Option<&str> = Deserialize::deserialize(deserializer)?;
+    Ok(SystemOrClass::from(s.map(|v| v.parse::<u32>())
+        .map_or(Ok(None), |v| v.map(Some))
+        .map_err(D::Error::custom)?))
+}
+
+fn deserialize_signature_id<'de, D>(deserializer: D) -> Result<Option<String>, D::Error> where D: Deserializer<'de> {
+    let s: Option<&str> = Deserialize::deserialize(deserializer)?;
+    Ok(s.and_then(|v| match v { "???" => None, _ => Some(v.to_uppercase()) }))
+}
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct TripwireWormholeRaw {
@@ -16,8 +29,16 @@ pub struct TripwireWormholeRaw {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct TripwireSignatureRaw {
-    #[serde(alias = "systemID")] system_id : Option<String>,
-    #[serde(alias = "signatureID")] signature_id : Option<String>,
+    #[serde(default)]
+    #[serde(deserialize_with = "deserialize_system_id")]
+    #[serde(alias = "systemID")]
+    system_id : SystemOrClass,
+
+    #[serde(default)]
+    #[serde(deserialize_with = "deserialize_signature_id")]
+    #[serde(alias = "signatureID")]
+    signature_id : Option<String>,
+
     #[serde(alias = "lifeTime")] life_time : String,
     #[serde(alias = "modifiedTime")] modified_time : String,
 }
@@ -68,6 +89,12 @@ pub enum SystemOrClass {
     Class13,
     Pochven,
     Unknown
+}
+
+impl Default for SystemOrClass {
+    fn default() -> Self {
+        SystemOrClass::Unknown
+    }
 }
 
 impl From<Option<u32>> for SystemOrClass {
@@ -156,14 +183,13 @@ pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<T
             .ok_or_else(|| format!("Tripwire signature details missing from wormhole {}", wormhole_id))?
             .map(|signature| {
                 (
-                    signature.system_id.as_ref().and_then(|v| v.parse::<u32>().ok()),
-                    signature.signature_id.as_deref().and_then(|v| match v { "???" => None, _ => Some(v.to_uppercase()) }),
+                    signature.system_id.clone(),
+                    signature.signature_id.clone(),
                     NaiveDateTime::parse_from_str(&signature.life_time, "%Y-%m-%d %H:%M:%S").ok()
                 )
             });
 
-        let from_system = match from_system { Some(v) => v, None => continue };
-        let to_system = SystemOrClass::from(to_system);
+        let from_system = match from_system { SystemOrClass::SpecificSystem(v) => v, _ => continue };
         let wormhole_type = wormhole.wormhole_type.as_deref().and_then(|v| match v { "????" => None, "" => None, _ => Some(v.to_owned()) });
         let lifetime = [from_lifetime, to_lifetime].into_iter().flatten().max().ok_or_else(|| format!("Tripwire lifeTime is missing from {}", wormhole_id))?;
         let age = Utc::now().naive_utc() - lifetime;
