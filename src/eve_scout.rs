@@ -50,7 +50,7 @@ pub async fn get_eve_scout(_ : Option<EveScoutRefresh>) -> Result<EveScoutRefres
         .map_err(|_| format!("EvE-Scout failed to parse wormhole updated_at"))?
         .into_iter()
         .max()
-        .unwrap_or(NaiveDateTime::MIN);
+        .unwrap_or(NaiveDateTime::UNIX_EPOCH);
 
     Ok(EveScoutRefresh { wormholes, signature_count, signature_time })
 }

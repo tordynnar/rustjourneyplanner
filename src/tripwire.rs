@@ -162,7 +162,7 @@ impl PartialEq for TripwireRefresh {
 
 pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<TripwireRefresh, String> {
     let signature_count = previous_result.as_ref().map(|v| v.signature_count).unwrap_or(0);
-    let signature_time = previous_result.as_ref().map(|v| v.signature_time).unwrap_or(NaiveDateTime::MIN);
+    let signature_time = previous_result.as_ref().map(|v| v.signature_time).unwrap_or(NaiveDateTime::UNIX_EPOCH);
 
     let mut data = Vec::<TripwireWormhole>::new();
 
@@ -199,7 +199,7 @@ pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<T
         .map_err(|_| format!("Tripwire modifiedTime format wrong"))?
         .into_iter()
         .max()
-        .unwrap_or(NaiveDateTime::MIN);
+        .unwrap_or(NaiveDateTime::UNIX_EPOCH);
 
     let signature_count = signatures.iter().count();
 
