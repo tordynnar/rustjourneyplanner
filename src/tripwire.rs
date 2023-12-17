@@ -5,13 +5,6 @@ use web_sys;
 use tracing::info;
 use serde::{de::Error, Deserialize, Deserializer};
 use serde_json;
-use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum TripwireError {
-    #[error("Invalid life, expected stable or critical")]
-    InvalidLife,
-}
 
 fn deserialize_system_id<'de, D>(deserializer: D) -> Result<SystemOrClass, D::Error> where D: Deserializer<'de> {
     let s: Option<&str> = Deserialize::deserialize(deserializer)?;
@@ -35,15 +28,6 @@ fn deserialize_wormhole_type<'de, D>(deserializer: D) -> Result<Option<String>, 
     Ok(s.and_then(|v| match v { "????" => None, "" => None, _ => Some(v.to_owned()) }))
 }
 
-fn deserialize_life<'de, D>(deserializer: D) -> Result<WormholeLife, D::Error> where D: Deserializer<'de> {
-    let s: &str = Deserialize::deserialize(deserializer)?;
-    match s {
-        "stable" => Ok(WormholeLife::Stable),
-        "critical" => Ok(WormholeLife::EOL),
-        _ => Err(TripwireError::InvalidLife),
-    }.map_err(D::Error::custom)
-}
-
 #[derive(Debug, Clone, Deserialize)]
 pub struct TripwireWormholeRaw {
     #[serde(alias = "initialID")]
@@ -57,10 +41,8 @@ pub struct TripwireWormholeRaw {
     #[serde(alias = "type")]
     wormhole_type : Option<String>,
 
-    #[serde(deserialize_with = "deserialize_life")]
     life : WormholeLife,
-
-    mass : String,
+    mass : WormholeMass,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -76,9 +58,11 @@ pub struct TripwireSignatureRaw {
     signature_id : Option<String>,
 
     #[serde(deserialize_with = "deserialize_lifetime")]
-    #[serde(alias = "lifeTime")] life_time : NaiveDateTime,
+    #[serde(alias = "lifeTime")]
+    life_time : NaiveDateTime,
 
-    #[serde(alias = "modifiedTime")] modified_time : String,
+    #[serde(alias = "modifiedTime")]
+    modified_time : String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -87,16 +71,24 @@ pub struct TripwireRaw {
     pub wormholes : Option<HashMap<String,TripwireWormholeRaw>>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub enum WormholeLife {
+    #[serde(alias = "stable")]
     Stable,
-    EOL
+
+    #[serde(alias = "critical")]
+    EOL,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub enum WormholeMass {
+    #[serde(alias = "stable")]
     Stable,
+
+    #[serde(alias = "destab")]
     Destab,
+
+    #[serde(alias = "critical")]
     VOC
 }
 
@@ -224,13 +216,6 @@ pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<T
         let life_time = [from.life_time, to.life_time].into_iter().max().unwrap();
         let age = Utc::now().naive_utc() - life_time;
 
-        let mass = match wormhole.mass.as_ref() {
-            "stable" => Ok(WormholeMass::Stable),
-            "destab" => Ok(WormholeMass::Destab),
-            "critical" => Ok(WormholeMass::VOC),
-            _ => Err(format!("Tripwire wormhole mass is not stable, destab or critical for {}", wormhole_id)),
-        }?;
-
         // Wormholes older than 24 hours probably don't exist any more
         if age > Duration::hours(24) { continue }
 
@@ -240,7 +225,15 @@ pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<T
         // Don't want gates, already have then in the static data
         if wormhole.wormhole_type == Some("GATE".to_owned()) || from.signature_id == Some("GAT".to_owned()) || to.signature_id == Some("GAT".to_owned()) { continue }
 
-        data.push(TripwireWormhole { from_system, to_system : to.system_id, from_signature : from.signature_id.clone(), to_signature : to.signature_id.clone(), wormhole_type : wormhole.wormhole_type, life_time, life : wormhole.life, mass });
+        data.push(TripwireWormhole {
+            from_system,
+            to_system : to.system_id,
+            from_signature : from.signature_id.clone(),
+            to_signature : to.signature_id.clone(),
+            wormhole_type : wormhole.wormhole_type,
+            life_time, life : wormhole.life,
+            mass : wormhole.mass
+        });
     }
 
     Ok(TripwireRefresh {wormholes : data, signature_count, signature_time })
