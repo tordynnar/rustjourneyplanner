@@ -18,6 +18,11 @@ fn deserialize_signature_id<'de, D>(deserializer: D) -> Result<Option<String>, D
     Ok(s.and_then(|v| match v { "???" => None, _ => Some(v.to_uppercase()) }))
 }
 
+fn deserialize_lifetime<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error> where D: Deserializer<'de> {
+    let s: &str = Deserialize::deserialize(deserializer)?;
+    NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S").map_err(D::Error::custom)
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct TripwireWormholeRaw {
     #[serde(alias = "initialID")] initial_id : String,
@@ -39,7 +44,9 @@ pub struct TripwireSignatureRaw {
     #[serde(alias = "signatureID")]
     signature_id : Option<String>,
 
-    #[serde(alias = "lifeTime")] life_time : String,
+    #[serde(deserialize_with = "deserialize_lifetime")]
+    #[serde(alias = "lifeTime")] life_time : NaiveDateTime,
+
     #[serde(alias = "modifiedTime")] modified_time : String,
 }
 
@@ -69,7 +76,7 @@ pub struct TripwireWormhole {
     pub from_signature : Option<String>,
     pub to_signature : Option<String>,
     pub wormhole_type : Option<String>,
-    pub lifetime : NaiveDateTime,
+    pub life_time : NaiveDateTime,
     pub life : WormholeLife,
     pub mass : WormholeMass
 }
@@ -178,21 +185,21 @@ pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<T
     let wormholes = json.wormholes.ok_or_else(|| format!("Tripwire wormholes not present"))?;
 
     for (wormhole_id, wormhole) in wormholes {
-        let [(from_system, from_signature, from_lifetime), (to_system, to_signature, to_lifetime)] = [wormhole.initial_id, wormhole.secondary_id]
+        let [(from_system, from_signature, from_life_time), (to_system, to_signature, to_life_time)] = [wormhole.initial_id, wormhole.secondary_id]
             .try_map(|v| signatures.get(&v))
             .ok_or_else(|| format!("Tripwire signature details missing from wormhole {}", wormhole_id))?
             .map(|signature| {
                 (
                     signature.system_id.clone(),
                     signature.signature_id.clone(),
-                    NaiveDateTime::parse_from_str(&signature.life_time, "%Y-%m-%d %H:%M:%S").ok()
+                    signature.life_time.clone()
                 )
             });
 
         let from_system = match from_system { SystemOrClass::SpecificSystem(v) => v, _ => continue };
         let wormhole_type = wormhole.wormhole_type.as_deref().and_then(|v| match v { "????" => None, "" => None, _ => Some(v.to_owned()) });
-        let lifetime = [from_lifetime, to_lifetime].into_iter().flatten().max().ok_or_else(|| format!("Tripwire lifeTime is missing from {}", wormhole_id))?;
-        let age = Utc::now().naive_utc() - lifetime;
+        let life_time = [from_life_time, to_life_time].into_iter().max().unwrap();
+        let age = Utc::now().naive_utc() - life_time;
 
         let life = match wormhole.life.as_ref() {
             "stable" => {
@@ -222,7 +229,7 @@ pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<T
         // Don't want gates, already have then in the static data
         if wormhole_type == Some("GATE".to_owned()) || from_signature == Some("GAT".to_owned()) || to_signature == Some("GAT".to_owned()) { continue }
 
-        data.push(TripwireWormhole { from_system, to_system, from_signature, to_signature, wormhole_type, lifetime, life, mass });
+        data.push(TripwireWormhole { from_system, to_system, from_signature, to_signature, wormhole_type, life_time, life, mass });
     }
 
     Ok(TripwireRefresh {wormholes : data, signature_count, signature_time })
