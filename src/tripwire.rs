@@ -231,7 +231,8 @@ pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<T
             from_signature : from.signature_id.clone(),
             to_signature : to.signature_id.clone(),
             wormhole_type : wormhole.wormhole_type,
-            life_time, life : wormhole.life,
+            life_time,
+            life : wormhole.life,
             mass : wormhole.mass
         });
     }
