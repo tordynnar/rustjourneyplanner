@@ -5,6 +5,13 @@ use web_sys;
 use tracing::info;
 use serde::{de::Error, Deserialize, Deserializer};
 use serde_json;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum TripwireError {
+    #[error("Invalid life, expected stable or critical")]
+    InvalidLife,
+}
 
 fn deserialize_system_id<'de, D>(deserializer: D) -> Result<SystemOrClass, D::Error> where D: Deserializer<'de> {
     let s: Option<&str> = Deserialize::deserialize(deserializer)?;
@@ -23,12 +30,36 @@ fn deserialize_lifetime<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Err
     NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S").map_err(D::Error::custom)
 }
 
+fn deserialize_wormhole_type<'de, D>(deserializer: D) -> Result<Option<String>, D::Error> where D: Deserializer<'de> {
+    let s: Option<&str> = Deserialize::deserialize(deserializer)?;
+    Ok(s.and_then(|v| match v { "????" => None, "" => None, _ => Some(v.to_owned()) }))
+}
+
+fn deserialize_life<'de, D>(deserializer: D) -> Result<WormholeLife, D::Error> where D: Deserializer<'de> {
+    let s: &str = Deserialize::deserialize(deserializer)?;
+    match s {
+        "stable" => Ok(WormholeLife::Stable),
+        "critical" => Ok(WormholeLife::EOL),
+        _ => Err(TripwireError::InvalidLife),
+    }.map_err(D::Error::custom)
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct TripwireWormholeRaw {
-    #[serde(alias = "initialID")] initial_id : String,
-    #[serde(alias = "secondaryID")] secondary_id : String,
-    #[serde(alias = "type")] wormhole_type : Option<String>,
-    life : String,
+    #[serde(alias = "initialID")]
+    initial_id : String,
+
+    #[serde(alias = "secondaryID")]
+    secondary_id : String,
+
+    #[serde(default)]
+    #[serde(deserialize_with = "deserialize_wormhole_type")]
+    #[serde(alias = "type")]
+    wormhole_type : Option<String>,
+
+    #[serde(deserialize_with = "deserialize_life")]
+    life : WormholeLife,
+
     mass : String,
 }
 
@@ -188,35 +219,10 @@ pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<T
         let from = signatures.get(&wormhole.initial_id).ok_or_else(|| format!("Tripwire initial signature details missing from {}", wormhole_id))?;
         let to = signatures.get(&wormhole.secondary_id).ok_or_else(|| format!("Tripwire secondary signature details missing from {}", wormhole_id))?;
 
-        /*
-        let [(from_system, from_signature, from_life_time), (to_system, to_signature, to_life_time)] = [wormhole.initial_id, wormhole.secondary_id]
-            .try_map(|v| signatures.get(&v))
-            .ok_or_else(|| format!("Tripwire signature details missing from wormhole {}", wormhole_id))?
-            .map(|signature| {
-                (
-                    signature.system_id.clone(),
-                    signature.signature_id.clone(),
-                    signature.life_time.clone()
-                )
-            });
-        */
-
         let from_system = match from.system_id { SystemOrClass::SpecificSystem(v) => v, _ => continue };
-        let wormhole_type = wormhole.wormhole_type.as_deref().and_then(|v| match v { "????" => None, "" => None, _ => Some(v.to_owned()) });
+
         let life_time = [from.life_time, to.life_time].into_iter().max().unwrap();
         let age = Utc::now().naive_utc() - life_time;
-
-        let life = match wormhole.life.as_ref() {
-            "stable" => {
-                if age < Duration::hours(20) {
-                    Ok(WormholeLife::Stable)
-                } else {
-                    Ok(WormholeLife::EOL)
-                }
-            },
-            "critical" => Ok(WormholeLife::EOL),
-            _ => Err(format!("Tripwire wormhole life is not stable or critical for {}", wormhole_id)),
-        }?;
 
         let mass = match wormhole.mass.as_ref() {
             "stable" => Ok(WormholeMass::Stable),
@@ -232,9 +238,9 @@ pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<T
         if from.signature_id == None && to.signature_id == None { continue }
 
         // Don't want gates, already have then in the static data
-        if wormhole_type == Some("GATE".to_owned()) || from.signature_id == Some("GAT".to_owned()) || to.signature_id == Some("GAT".to_owned()) { continue }
+        if wormhole.wormhole_type == Some("GATE".to_owned()) || from.signature_id == Some("GAT".to_owned()) || to.signature_id == Some("GAT".to_owned()) { continue }
 
-        data.push(TripwireWormhole { from_system, to_system : to.system_id, from_signature : from.signature_id.clone(), to_signature : to.signature_id.clone(), wormhole_type, life_time, life, mass });
+        data.push(TripwireWormhole { from_system, to_system : to.system_id, from_signature : from.signature_id.clone(), to_signature : to.signature_id.clone(), wormhole_type : wormhole.wormhole_type, life_time, life : wormhole.life, mass });
     }
 
     Ok(TripwireRefresh {wormholes : data, signature_count, signature_time })
