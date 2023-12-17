@@ -3,6 +3,30 @@ use std::convert::From;
 use chrono::{NaiveDateTime, Utc, Duration};
 use web_sys;
 use tracing::info;
+use serde::Deserialize;
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TripwireWormholeRaw {
+    #[serde(alias = "initialID")] initial_id : String,
+    #[serde(alias = "secondaryID")] secondary_id : String,
+    #[serde(alias = "type")] wormhole_type : Option<String>,
+    life : String,
+    mass : String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TripwireSignatureRaw {
+    #[serde(alias = "systemID")] system_id : Option<String>,
+    #[serde(alias = "signatureID")] signature_id : Option<String>,
+    #[serde(alias = "lifeTime")] life_time : String,
+    #[serde(alias = "modifiedTime")] modified_time : String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TripwireRaw {
+    pub signatures : Option<HashMap<String,TripwireSignatureRaw>>,
+    pub wormholes : Option<HashMap<String,TripwireWormholeRaw>>,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum WormholeLife {
@@ -100,10 +124,10 @@ pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<T
         .error_for_status().map_err(|_| format!("Tripwire HTTP request failed"))?
         .bytes().await.map_err(|_| format!("Tripwire HTTP request failed"))?;
 
-    let json : serde_json::Value = serde_json::from_slice(&result)
-        .map_err(|_| format!("Tripwire JSON parse failed"))?;
+    let json = serde_json::from_slice::<TripwireRaw>(&result)
+        .map_err(|e| format!("Tripwire parse failed: {:?}", e))?;
 
-    let signatures = match json["signatures"].as_object() {
+    let signatures = match json.signatures {
         Some(s) => s,
         None => {
             let previous_result_value = previous_result.ok_or_else(|| format!("Tripwire signatures not present in initial refresh"))?;
@@ -112,55 +136,55 @@ pub async fn get_tripwire(previous_result : Option<TripwireRefresh>) -> Result<T
     };
 
     let signature_time = signatures
-        .iter().filter_map(|(_, v)| {
-            v["modifiedTime"].as_str().and_then(|vv| NaiveDateTime::parse_from_str(vv, "%Y-%m-%d %H:%M:%S").ok())
-        }).max().unwrap_or(NaiveDateTime::MIN);
-    
+        .iter()
+        .map(|(_, v)| NaiveDateTime::parse_from_str(&v.modified_time, "%Y-%m-%d %H:%M:%S"))
+        .collect::<Result<Vec<_>,_>>()
+        .map_err(|_| format!("Tripwire modifiedTime format wrong"))?
+        .into_iter()
+        .max()
+        .unwrap_or(NaiveDateTime::MIN);
+
     let signature_count = signatures.iter().count();
 
     info!("Signature update: {:?}", signature_time);
 
-    let wormholes = json["wormholes"].as_object().ok_or_else(|| format!("Tripwire wormholes not present"))?;
+    let wormholes = json.wormholes.ok_or_else(|| format!("Tripwire wormholes not present"))?;
 
     for (wormhole_id, wormhole) in wormholes {
-        let initial_id = wormhole["initialID"].as_str().ok_or_else(|| format!("Tripwire initialID missing from wormhole {}", wormhole_id))?;
-        let secondary_id = wormhole["secondaryID"].as_str().ok_or_else(|| format!("Tripwire secondaryID missing from wormhole {}", wormhole_id))?;
+        let [(from_system, from_signature, from_lifetime), (to_system, to_signature, to_lifetime)] = [wormhole.initial_id, wormhole.secondary_id]
+            .try_map(|v| signatures.get(&v))
+            .ok_or_else(|| format!("Tripwire signature details missing from wormhole {}", wormhole_id))?
+            .map(|signature| {
+                (
+                    signature.system_id.as_ref().and_then(|v| v.parse::<u32>().ok()),
+                    signature.signature_id.as_deref().and_then(|v| match v { "???" => None, _ => Some(v.to_uppercase()) }),
+                    NaiveDateTime::parse_from_str(&signature.life_time, "%Y-%m-%d %H:%M:%S").ok()
+                )
+            });
 
-        let from_system = match json["signatures"][initial_id]["systemID"].as_str().and_then(|v| v.parse::<u32>().ok()) {
-            Some(v) => v,
-            None => continue
-        };
-
-        let to_system = SystemOrClass::from(json["signatures"][secondary_id]["systemID"].as_str().and_then(|v| v.parse::<u32>().ok()));
-
-        let from_signature = json["signatures"][initial_id]["signatureID"].as_str().and_then(|v| match v { "???" => None, _ => Some(v.to_uppercase()) });
-        let to_signature = json["signatures"][secondary_id]["signatureID"].as_str().and_then(|v| match v { "???" => None, _ => Some(v.to_uppercase()) });
-
-        let wormhole_type = wormhole["type"].as_str().and_then(|v| match v { "????" => None, "" => None, _ => Some(v.to_owned()) });
-
-        let lifetime_str = json["signatures"][initial_id]["lifeTime"].as_str().ok_or_else(|| format!("Tripwire wormhole lifeTime missing from {}", wormhole_id))?;
-        let lifetime = NaiveDateTime::parse_from_str(lifetime_str, "%Y-%m-%d %H:%M:%S").map_err(|_| format!("Tripwire wormhole lifeTime wrong datetime format for {}", wormhole_id))?;
+        let from_system = match from_system { Some(v) => v, None => continue };
+        let to_system = SystemOrClass::from(to_system);
+        let wormhole_type = wormhole.wormhole_type.as_deref().and_then(|v| match v { "????" => None, "" => None, _ => Some(v.to_owned()) });
+        let lifetime = [from_lifetime, to_lifetime].into_iter().flatten().max().ok_or_else(|| format!("Tripwire lifeTime is missing from {}", wormhole_id))?;
         let age = Utc::now().naive_utc() - lifetime;
 
-        let life = match wormhole["life"].as_str() {
-            Some("stable") => {
+        let life = match wormhole.life.as_ref() {
+            "stable" => {
                 if age < Duration::hours(20) {
                     Ok(WormholeLife::Stable)
                 } else {
                     Ok(WormholeLife::EOL)
                 }
             },
-            Some("critical") => Ok(WormholeLife::EOL),
-            Some(_) => Err(format!("Tripwire wormhole life is not stable or critical for {}", wormhole_id)),
-            None => Err(format!("Tripwire wormhole life missing from {}", wormhole_id))
+            "critical" => Ok(WormholeLife::EOL),
+            _ => Err(format!("Tripwire wormhole life is not stable or critical for {}", wormhole_id)),
         }?;
 
-        let mass = match wormhole["mass"].as_str() {
-            Some("stable") => Ok(WormholeMass::Stable),
-            Some("destab") => Ok(WormholeMass::Destab),
-            Some("critical") => Ok(WormholeMass::VOC),
-            Some(_) => Err(format!("Tripwire wormhole mass is not stable, destab or critical for {}", wormhole_id)),
-            None => Err(format!("Tripwire wormhole mass is missing from {}", wormhole_id))
+        let mass = match wormhole.mass.as_ref() {
+            "stable" => Ok(WormholeMass::Stable),
+            "destab" => Ok(WormholeMass::Destab),
+            "critical" => Ok(WormholeMass::VOC),
+            _ => Err(format!("Tripwire wormhole mass is not stable, destab or critical for {}", wormhole_id)),
         }?;
 
         // Wormholes older than 24 hours probably don't exist any more
