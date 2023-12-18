@@ -67,3 +67,10 @@ trunk build --release
 # The architecture must be specified if testing from an M-series Mac
 act --container-architecture linux/amd64
 ```
+
+### Support
+
+Support the project in the following ways:
+
+- Contribute code to the project
+- In-game ISK donations to Tordynnar are welcome!
