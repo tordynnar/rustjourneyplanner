@@ -22,7 +22,7 @@ Download the ZIP file in [Releases](https://github.com/tordynnar/rustjourneyplan
 - journey.wasm
 - sde.json
 
-Place these files into the ./public folder of Tripwire. Use Jouney Planner by logging in to Tripwire, then browsing to
+Place these files into the ./public folder of Tripwire. Use Journey Planner by logging in to Tripwire, then browsing to
 `https://[Tripwire URL]/journey.htm`.
 
 WASM files must be served with `application/wasm` as its Content-Type. Make sure your web server is configured to use that MIME type
