@@ -10,7 +10,7 @@ Journey Planner is designed to run entirely within the web browser. It does not 
 its backend. It is written entirely in Rust using the [Leptos](https://leptos.dev/) framework, and compiles to
 [WASM](https://webassembly.org/) to run in the browser.
 
-![screenshot](https://github.com/tordynnar/rustjourneyplanner/raw/master/screenshot.png)
+![screenshot](https://raw.githubusercontent.com/tordynnar/rustjourneyplanner/main/screenshot.png)
 
 ### Deployment
 
