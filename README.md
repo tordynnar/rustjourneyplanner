@@ -10,6 +10,25 @@ Journey Planner is designed to run entirely within the web browser. It does not 
 its backend. It is written entirely in Rust using the [Leptos](https://leptos.dev/) framework, and compiles to
 [WASM](https://webassembly.org/) to run in the browser.
 
+![screenshot](https://github.com/tordynnar/rustjourneyplanner/raw/master/screenshot.png)
+
+### Deployment
+
+Download the ZIP file in [Releases](https://github.com/tordynnar/rustjourneyplanner/releases). It should contain the following files:
+
+- journey.css
+- journey.htm
+- journey.js
+- journey.wasm
+- sde.json
+
+Place these files into the ./public folder of Tripwire. Use Jouney Planner by logging in to Tripwire, then browsing to
+`https://[Tripwire URL]/journey.htm`.
+
+WASM files must be served with `application/wasm` as its Content-Type. Make sure your web server is configured to use that MIME type
+for .wasm files. For example `types { application/wasm wasm; }` must be specified for nginx. See
+[mime.types](https://github.com/nginx/nginx/blob/master/conf/mime.types). 
+
 ### Updating the SDE
 
 The [Static Data Export (SDE)](https://developers.eveonline.com/resource) contains information needed by Journey Planner
