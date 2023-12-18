@@ -43,7 +43,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          release_name: Journey Planner ${{ github.ref_name }}
           draft: false
           prerelease: false
 
@@ -55,5 +55,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./release.zip
-          asset_name: release.zip
+          asset_name: journey-planner-${{ github.ref_name }}.zip
           asset_content_type: application/zip
