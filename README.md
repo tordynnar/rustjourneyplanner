@@ -70,7 +70,5 @@ act --container-architecture linux/amd64
 
 ### Support
 
-Support the project in the following ways:
-
 - Contribute code to the project
 - In-game ISK donations to Tordynnar are welcome!
