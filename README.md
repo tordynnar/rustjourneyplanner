@@ -10,9 +10,9 @@ Journey Planner is designed to run entirely within the web browser. It does not 
 its backend. It is written entirely in Rust using the [Leptos](https://leptos.dev/) framework, and compiles to
 [WASM](https://webassembly.org/) to run in the browser.
 
-### Parsing the Eve SDE
+### Updating the SDE
 
-The Eve [Static Data Export (SDE)](https://developers.eveonline.com/resource) contains information needed by Journey Planner
+The [Static Data Export (SDE)](https://developers.eveonline.com/resource) contains information needed by Journey Planner
 such as system names, classes, gates, etc. A subset of this data needs to be serialized and distributed with Journey Planner.
 
 This step can be skipped because this repository has the serialized SDE included at `./ref/sde.json`.
