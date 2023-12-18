@@ -1,9 +1,9 @@
-workspace = { members = ["tools/eve_sde", "tools/eve_sde_cli"] }
+workspace = { members = [ "tools/build_theme","tools/eve_sde", "tools/eve_sde_cli" ] }
+
 [package]
 name = "rustjourneyplanner"
 version = "0.1.0"
 edition = "2021"
-build = "build.rs"
 
 [profile.release]
 opt-level = 'z'
@@ -17,7 +17,7 @@ chrono = "0.4.31"
 console_error_panic_hook = "0.1.7"
 eve_sde = { path = "tools/eve_sde" }
 itertools = "0.12.0"
-leptonic = { path = "../leptonic/leptonic", features = ["csr"] }
+leptonic = { git = "https://github.com/tordynnar/leptonic.git", branch = "all-changes", features = ["csr"] }
 leptos = { version = "0.5.2", features = ["csr"] }
 leptos-use = "0.8.2"
 leptos_icons = { version = "0.1.0", features = ["BsGithub", "CgSwap"] }
@@ -29,7 +29,3 @@ tracing = "0.1.40"
 tracing-wasm = "0.2.1"
 uuid = { version = "1.6.1", features = ["v4", "js", "serde"] }
 web-sys = "0.3.66"
-
-[build-dependencies]
-leptonic-theme = "0.3.0"
-leptos-tiptap-build = "0.2.4"
